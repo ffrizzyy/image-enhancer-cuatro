@@ -71,8 +71,8 @@ Parallel tracks: slicer (T14–T16), providers (T17–T19), stitcher (T20–T22)
 - [x] **T28** Run screen: controls, banners, cost preview — deps: T27, T26
 
 ### Checkpoint D — after T23–T28
-- [ ] 8-tile fake job with 20% failures completes; kill/restart does not re-run accepted tiles
-- [ ] Pause banners <1 s; preflight blocks non-ready sessions
+- [x] 8-tile fake job with 20% failures completes; kill/restart does not re-run accepted tiles
+- [x] Pause banners <1 s; preflight blocks non-ready sessions
 - [ ] Human review before Phase 4
 
 ## Phase 4 — Result and Export
