@@ -1,0 +1,22 @@
+{
+  "id": "architecture-interior",
+  "name": "Architecture & interiors",
+  "kind": "prompt",
+  "family": "environment",
+  "fidelity": "preserve",
+  "template": "MASTER GUIDE (what the whole picture shows; applies to every tile): {{userPrompt}}\n\nCONTENT-TYPE RULES (Architecture & interiors): Architecture or interior. Keep the perspective, vanishing points and every vertical and horizontal line exactly; straight edges stay perfectly straight and parallel lines stay parallel. Regenerate materials at their true scale: brick and stone joints, plaster, wood grain, tiles, glass, metal, fabric. Signage and text stay unchanged. Do not add furniture, people, windows, plants or decoration.\n\n{{fidelityClause}}",
+  "defaultPrompt": "Architecture or an interior. Keep the perspective, every straight line, opening and piece of furniture exactly as shown; regenerate accurate materials and lighting detail.",
+  "negative": [
+    "bent lines",
+    "perspective distortion",
+    "invented structures"
+  ],
+  "defaults": {
+    "grid": [
+      2,
+      3
+    ],
+    "overlapPct": 20
+  },
+  "warnings": []
+}

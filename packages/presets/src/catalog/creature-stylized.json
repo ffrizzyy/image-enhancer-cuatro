@@ -1,0 +1,24 @@
+{
+  "id": "creature-stylized",
+  "name": "Stylized creature",
+  "kind": "prompt",
+  "family": "character",
+  "fidelity": "balanced",
+  "template": "MASTER GUIDE (what the whole picture shows; applies to every tile): {{userPrompt}}\n\nCONTENT-TYPE RULES (Stylized creature): Stylized creature. Identity lock: this is a specific individual design, so keep the exact same face or head shape, features, expression, gaze direction, proportions, markings, hairstyle or fur pattern and outfit or armour design; never change who or what they are. Keep the bold shapes, the existing palette, linework and shading steps, and the way fur, scales or skin are simplified in the original. Regenerate clean, crisp edges and fills in place. Do not add realistic texture, extra anatomy or new decoration, and keep the rendering identical in every tile.\n\n{{fidelityClause}}",
+  "defaultPrompt": "A stylized creature (illustrated or stylized 3D). Keep the design, shapes, palette and shading exactly as shown; only clean and sharpen it, with no realism added.",
+  "negative": [
+    "changed design",
+    "extra limbs",
+    "photorealism"
+  ],
+  "defaults": {
+    "grid": [
+      2,
+      3
+    ],
+    "overlapPct": 20
+  },
+  "warnings": [
+    "Faces and hands split across tiles poorly: choose a grid that does not cut through faces."
+  ]
+}

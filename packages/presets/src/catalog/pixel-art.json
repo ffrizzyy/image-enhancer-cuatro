@@ -1,0 +1,23 @@
+{
+  "id": "pixel-art",
+  "name": "Pixel art cleanup / upscale",
+  "kind": "prompt",
+  "family": "stylize",
+  "fidelity": "strict",
+  "template": "MASTER GUIDE (what the whole picture shows; applies to every tile): {{userPrompt}}\n\nCONTENT-TYPE RULES (Pixel art cleanup / upscale): Pixel art. The result must stay true pixel art: the same pixel grid, every original pixel becomes a crisp block, the same palette with no new colours, no gradients, no anti-aliasing, no blurring and no smoothing. Remove only clear artifacts such as stray noisy pixels. For this content type, hard pixel edges and flat colour areas are correct (they override the smooth-gradient wish in section 4). Keep the pixel size identical in every tile.\n\n{{fidelityClause}}",
+  "defaultPrompt": "Pixel art. Keep the pixel grid, the exact palette and every sprite shape as shown; only clean stray noisy pixels and upscale with hard pixel edges.",
+  "negative": [
+    "anti-aliasing",
+    "blurry pixels",
+    "new colors",
+    "smooth gradients"
+  ],
+  "defaults": {
+    "grid": [
+      2,
+      3
+    ],
+    "overlapPct": 10
+  },
+  "warnings": []
+}

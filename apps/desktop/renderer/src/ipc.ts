@@ -1,0 +1,40 @@
+import type { ProviderId } from '@ie/contracts';
+
+import type { IeApi } from '../../preload/index';
+
+declare global {
+  interface Window {
+    ie: IeApi;
+  }
+}
+
+/**
+ * Typed IPC client. The only renderer path to the main process; it reads
+ * `window.ie` lazily so tests can install a fake bridge.
+ */
+export const ipc = {
+  app: {
+    ping: () => window.ie.app.ping(),
+  },
+  intake: {
+    import: (path: string) => window.ie.intake.import(path),
+    createJob: (request: Parameters<IeApi['intake']['createJob']>[0]) => window.ie.intake.createJob(request),
+  },
+  presets: {
+    list: () => window.ie.presets.list(),
+    suggestCategory: (request: Parameters<IeApi['presets']['suggestCategory']>[0]) => window.ie.presets.suggestCategory(request),
+  },
+  files: {
+    pathFor: (file: File) => window.ie.files.pathFor(file),
+  },
+  sessions: {
+    open: (providerId: ProviderId, visible: boolean) => window.ie.sessions.open(providerId, visible),
+    status: (providerId: ProviderId) => window.ie.sessions.status(providerId),
+    clear: (providerId: ProviderId) => window.ie.sessions.clear(providerId),
+    onStatus: (listener: Parameters<IeApi['sessions']['onStatus']>[0]) => window.ie.sessions.onStatus(listener),
+  },
+  settings: {
+    get: () => window.ie.settings.get(),
+    set: (patch: Parameters<IeApi['settings']['set']>[0]) => window.ie.settings.set(patch),
+  },
+};

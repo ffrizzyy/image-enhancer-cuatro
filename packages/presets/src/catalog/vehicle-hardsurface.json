@@ -1,0 +1,22 @@
+{
+  "id": "vehicle-hardsurface",
+  "name": "Vehicle / hard-surface / mech",
+  "kind": "prompt",
+  "family": "props",
+  "fidelity": "preserve",
+  "template": "MASTER GUIDE (what the whole picture shows; applies to every tile): {{userPrompt}}\n\nCONTENT-TYPE RULES (Vehicle / hard-surface / mech): Hard-surface subject (vehicle, machine, mech, weapon or similar). Regenerate crisp panel lines, seams, bolts, rivets, vents, hoses, decals and finishes (brushed, cast, painted or chipped metal, rubber, glass) in place. Keep symmetry, parallel lines and circular shapes exact. Do not alter the panel layout, lettering, numbers or markings, and do not add parts, damage or weathering that is not there.\n\n{{fidelityClause}}",
+  "defaultPrompt": "A vehicle, machine or hard-surface design. Keep every panel, part, decal and marking exactly where it is; regenerate crisp panel lines and metal, paint and coating finishes.",
+  "negative": [
+    "warped panels",
+    "broken symmetry",
+    "melted edges"
+  ],
+  "defaults": {
+    "grid": [
+      2,
+      3
+    ],
+    "overlapPct": 15
+  },
+  "warnings": []
+}

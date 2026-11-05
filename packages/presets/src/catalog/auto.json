@@ -1,0 +1,10 @@
+{
+  "id": "auto",
+  "name": "Auto-detect",
+  "kind": "auto",
+  "family": "smart",
+  "fidelity": "balanced",
+  "negative": [],
+  "defaults": { "grid": [2, 3], "overlapPct": 15 },
+  "warnings": ["Suggests a category from the image and your prompt. You can always override it before starting."]
+}

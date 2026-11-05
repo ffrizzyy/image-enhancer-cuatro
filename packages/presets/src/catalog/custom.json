@@ -1,0 +1,18 @@
+{
+  "id": "custom",
+  "name": "Custom",
+  "kind": "prompt",
+  "family": "custom",
+  "fidelity": "balanced",
+  "template": "MASTER GUIDE (what the whole picture shows; applies to every tile): {{userPrompt}}\n\nCONTENT-TYPE RULES (Custom): General image. Add detail only inside what already exists, at the true scale of each subject in the whole picture. Identify materials and subjects from the MASTER GUIDE and regenerate them consistently in every tile.\n\n{{fidelityClause}}",
+  "defaultPrompt": "Enhance the whole image. Keep everything exactly as shown and regenerate detail only inside what already exists, at the true scale of each subject.",
+  "negative": [],
+  "defaults": {
+    "grid": [
+      2,
+      3
+    ],
+    "overlapPct": 15
+  },
+  "warnings": []
+}

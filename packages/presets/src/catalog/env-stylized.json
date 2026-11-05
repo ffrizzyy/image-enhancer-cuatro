@@ -1,0 +1,22 @@
+{
+  "id": "env-stylized",
+  "name": "Stylized environment",
+  "kind": "prompt",
+  "family": "environment",
+  "fidelity": "balanced",
+  "template": "MASTER GUIDE (what the whole picture shows; applies to every tile): {{userPrompt}}\n\nCONTENT-TYPE RULES (Stylized environment): Stylized environment (painterly, toon, low-poly or similar). Keep the existing art style exactly: the same brush or line language, shape simplification, palette and number of shading steps. Add finish only inside existing shapes: clean edges, tidy gradients and brush or texture marks at one fixed scale across all tiles. Do not make it more realistic, do not add outlines or details that were not there, and do not change the style from one tile to the next.\n\n{{fidelityClause}}",
+  "defaultPrompt": "A stylized environment (painterly, toon or low-poly). Keep the existing art style, shapes, palette and shading exactly; only finish and clean it, with no extra realism.",
+  "negative": [
+    "photorealism",
+    "noisy textures",
+    "inconsistent style"
+  ],
+  "defaults": {
+    "grid": [
+      2,
+      3
+    ],
+    "overlapPct": 15
+  },
+  "warnings": []
+}

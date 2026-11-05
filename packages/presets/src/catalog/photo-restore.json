@@ -1,0 +1,22 @@
+{
+  "id": "photo-restore",
+  "name": "Photo restoration / upscale",
+  "kind": "prompt",
+  "family": "restore",
+  "fidelity": "strict",
+  "template": "MASTER GUIDE (what the whole picture shows; applies to every tile): {{userPrompt}}\n\nCONTENT-TYPE RULES (Photo restoration / upscale): Photograph restoration. Remove noise, scratches, dust, blur and compression blocks, and recover genuine detail only where the photo hints at it. Faces and text are restored, never replaced: keep identity, expression, age and every character of text. Keep the tonal character of the photograph and a fine natural grain; do not smooth it into plastic. Do not colourise, retouch blemishes, change clothing or background, or invent content that is not visible.\n\n{{fidelityClause}}",
+  "defaultPrompt": "A photograph to restore. Keep the people, objects, text, tones and grain character exactly as shown; remove noise, scratches, dust, blur and compression damage and recover only real detail.",
+  "negative": [
+    "new objects",
+    "changed faces",
+    "over-smoothing"
+  ],
+  "defaults": {
+    "grid": [
+      2,
+      3
+    ],
+    "overlapPct": 15
+  },
+  "warnings": []
+}

@@ -1,0 +1,22 @@
+{
+  "id": "props-realistic",
+  "name": "Realistic props",
+  "kind": "prompt",
+  "family": "props",
+  "fidelity": "preserve",
+  "template": "MASTER GUIDE (what the whole picture shows; applies to every tile): {{userPrompt}}\n\nCONTENT-TYPE RULES (Realistic props): Realistic props. Regenerate believable surface detail: metal grain and scratches, wood fibre, fabric weave, leather creasing, paint chips, edge wear, rust and dust, at the true physical scale of each object. Keep proportions, scale cues and the existing wear pattern. Do not add damage, labels, logos, parts or objects that are not there, and do not clean away wear that is.\n\n{{fidelityClause}}",
+  "defaultPrompt": "Realistic props and objects. Keep every shape, proportion, colour and the existing wear pattern; regenerate believable material detail at the true physical size of each object.",
+  "negative": [
+    "plastic look",
+    "warped shapes",
+    "extra objects"
+  ],
+  "defaults": {
+    "grid": [
+      2,
+      3
+    ],
+    "overlapPct": 15
+  },
+  "warnings": []
+}

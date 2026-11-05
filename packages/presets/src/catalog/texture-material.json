@@ -1,0 +1,26 @@
+{
+  "id": "texture-material",
+  "name": "Texture / seamless material",
+  "kind": "prompt",
+  "family": "texture",
+  "fidelity": "strict",
+  "template": "MASTER GUIDE (what the whole picture shows; applies to every tile): {{userPrompt}}\n\nCONTENT-TYPE RULES (Texture / seamless material): Material texture sample that must stay seamless. Regenerate fine surface structure (grain, weave, pores, pits, scratches, fibres) uniformly at ONE fixed texture scale across the whole image. Keep the lighting flat and even: no baked-in shadows, vignette, gradients or perspective. The left and right edges, and the top and bottom edges, must still continue into each other as in the original, so never complete, close or reshape anything at the borders.\n\n{{fidelityClause}}",
+  "defaultPrompt": "A seamless material texture sample. Keep its pattern, colour and even lighting exactly as shown; regenerate fine surface structure at one fixed texture scale, with the edges still wrapping seamlessly.",
+  "negative": [
+    "visible seams",
+    "vignette",
+    "uneven lighting",
+    "perspective distortion"
+  ],
+  "defaults": {
+    "grid": [
+      2,
+      3
+    ],
+    "overlapPct": 20
+  },
+  "wrap": true,
+  "warnings": [
+    "Edges wrap around: opposite sides of the image are treated as neighbors."
+  ]
+}

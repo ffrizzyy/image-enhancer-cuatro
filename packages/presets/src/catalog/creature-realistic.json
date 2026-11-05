@@ -1,0 +1,24 @@
+{
+  "id": "creature-realistic",
+  "name": "Realistic creature",
+  "kind": "prompt",
+  "family": "character",
+  "fidelity": "preserve",
+  "template": "MASTER GUIDE (what the whole picture shows; applies to every tile): {{userPrompt}}\n\nCONTENT-TYPE RULES (Realistic creature): Realistic creature. Identity lock: this is a specific individual design, so keep the exact same face or head shape, features, expression, gaze direction, proportions, markings, hairstyle or fur pattern and outfit or armour design; never change who or what they are. Regenerate skin, scale, fur, feather, chitin, horn, claw, teeth and eye detail along the existing growth direction, at the true scale of the whole animal so a hair or scale is the same size in every tile. Keep every marking, pattern and scar, the exact anatomy and limb count, and the pose. Do not add limbs, eyes, teeth, wounds or decoration.\n\n{{fidelityClause}}",
+  "defaultPrompt": "A realistic creature (animal, monster or beast). Keep the anatomy, pose, markings and colouring exactly as shown; regenerate skin, scale, fur, feather and eye detail at the true scale of the whole animal.",
+  "negative": [
+    "changed anatomy",
+    "extra limbs",
+    "cartoon look"
+  ],
+  "defaults": {
+    "grid": [
+      2,
+      3
+    ],
+    "overlapPct": 20
+  },
+  "warnings": [
+    "Faces and hands split across tiles poorly: choose a grid that does not cut through faces."
+  ]
+}

@@ -1,0 +1,475 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`buildPrompt > golden prompts > char-realistic / center 1`] = `
+"Edit the attached image: image-to-image enhancement. Do NOT create a new picture and do NOT reimagine anything. Return the SAME picture, restored and upscaled into a far more detailed, high-resolution version. Output exactly ONE image.
+
+1. EXACT GEOMETRY AND PROPORTIONS (HIGHEST PRIORITY)
+- IMPORTANT: this image is ONE TILE cut from a larger picture. Many neighbouring tiles are enhanced separately and then stitched back together, so ANY shift, stretch, warp or change of proportion creates a visible mismatch. The enhanced image must line up with the attached image pixel for pixel.
+- POSITION: this tile is a central area of the full image.
+- Treat the attached image as a locked reference layer: if the result were placed exactly on top of it, every edge, contour, line, object, body part and facial feature must sit in the same position, with the same size and the same proportions.
+- Do not move, resize, rotate, bend, stretch, squash, slim, widen, lengthen or reshape anything. Straight lines must stay perfectly straight (window grids, building edges, poles, panel lines, text); curves keep their exact curvature; angles and perspective stay identical.
+- Keep the exact field of view and scale: no zoom, no crop, no reframing, no outpainting, no borders, the exact same aspect ratio.
+- Anything cut by an edge of the image stays cut at exactly the same place and angle. Do not complete or close objects at the border.
+- Do not add, remove, move, duplicate or replace any object, person, mark, sign, logo or text.
+
+2. COLOR AND LIGHT (NON-NEGOTIABLE)
+- Keep the original colour palette, hue, saturation, white balance, tonal balance, light direction, shadows, highlights and reflections. Do not make it brighter, darker, warmer, cooler, more saturated or more dramatic. No new light sources.
+
+3. CONSISTENCY ACROSS ALL TILES (VERY IMPORTANT)
+- Every tile of this picture must look as if it was enhanced in ONE pass by the same artist: the same style, the same rendering approach, the same density of added detail, the same texture scale and the same texture contrast.
+- The size of every texture and detail is set by the real (or painted) scale of the subject in the WHOLE picture, never by the size of this crop. A leaf, brick, pore, hair strand, brush stroke or fabric thread keeps the same size whether the tile shows a lot or only a little of it.
+- Add detail only INSIDE what already exists; where a detail is ambiguous, stay faithful to the original.
+
+MASTER GUIDE (what the whole picture shows; applies to every tile): a rain-soaked alley at dusk, neon signs
+
+CONTENT-TYPE RULES (Realistic character): Realistic character. Identity lock: this is a specific individual design, so keep the exact same face or head shape, features, expression, gaze direction, proportions, markings, hairstyle or fur pattern and outfit or armour design; never change who or what they are. Regenerate real detail inside what exists: skin texture (pores, fine lines, peach fuzz), eyes (iris detail, eyelashes, the catchlights already there), lips, teeth, eyebrow hairs, individual hair strands, fabric weave and stitching, jewellery and metal. Hands and fingers keep their exact count, pose and proportions. Keep skin tone, age, makeup and every freckle, scar and mole where it is. Do not beautify, smooth, retouch, slim, change features, or add accessories.
+
+FIDELITY: STRICT. Change nothing except image quality: remove noise and blur and recover fine detail while every shape, colour and element stays exactly where it is.
+
+Avoid: changed face, different person, extra fingers, distorted hands.
+
+4. QUALITY
+- Clean edges without halos, ringing or over-sharpening; less compression noise and artifacts; smooth gradients without banding; no artificial detail patterns.
+
+5. OUTPUT RESOLUTION (REQUIRED)
+- Generate a HIGH-RESOLUTION image: at least 2K (2048 px on the longest side; higher is better, for example 4096 px if possible), with exactly the same aspect ratio as the attached image so the result can be placed back exactly over it.
+
+6. OUTPUT
+- Return the image itself, no text. No collage, no before/after, no borders, no labels, no watermark, no added text.
+
+FINAL PRIORITY: 1) EXACT GEOMETRY AND PROPORTIONS, 2) FIDELITY TO THE ATTACHED IMAGE AND THE MASTER GUIDE, 3) CONSISTENT, CONTENT-TYPE-CORRECT REGENERATED DETAIL."
+`;
+
+exports[`buildPrompt > golden prompts > char-realistic / corner 1`] = `
+"Edit the attached image: image-to-image enhancement. Do NOT create a new picture and do NOT reimagine anything. Return the SAME picture, restored and upscaled into a far more detailed, high-resolution version. Output exactly ONE image.
+
+1. EXACT GEOMETRY AND PROPORTIONS (HIGHEST PRIORITY)
+- IMPORTANT: this image is ONE TILE cut from a larger picture. Many neighbouring tiles are enhanced separately and then stitched back together, so ANY shift, stretch, warp or change of proportion creates a visible mismatch. The enhanced image must line up with the attached image pixel for pixel.
+- POSITION: this tile is the top-right corner of the full image.
+- Treat the attached image as a locked reference layer: if the result were placed exactly on top of it, every edge, contour, line, object, body part and facial feature must sit in the same position, with the same size and the same proportions.
+- Do not move, resize, rotate, bend, stretch, squash, slim, widen, lengthen or reshape anything. Straight lines must stay perfectly straight (window grids, building edges, poles, panel lines, text); curves keep their exact curvature; angles and perspective stay identical.
+- Keep the exact field of view and scale: no zoom, no crop, no reframing, no outpainting, no borders, the exact same aspect ratio.
+- Anything cut by an edge of the image stays cut at exactly the same place and angle. Do not complete or close objects at the border.
+- Do not add, remove, move, duplicate or replace any object, person, mark, sign, logo or text.
+
+2. COLOR AND LIGHT (NON-NEGOTIABLE)
+- Keep the original colour palette, hue, saturation, white balance, tonal balance, light direction, shadows, highlights and reflections. Do not make it brighter, darker, warmer, cooler, more saturated or more dramatic. No new light sources.
+
+3. CONSISTENCY ACROSS ALL TILES (VERY IMPORTANT)
+- Every tile of this picture must look as if it was enhanced in ONE pass by the same artist: the same style, the same rendering approach, the same density of added detail, the same texture scale and the same texture contrast.
+- The size of every texture and detail is set by the real (or painted) scale of the subject in the WHOLE picture, never by the size of this crop. A leaf, brick, pore, hair strand, brush stroke or fabric thread keeps the same size whether the tile shows a lot or only a little of it.
+- Add detail only INSIDE what already exists; where a detail is ambiguous, stay faithful to the original.
+
+MASTER GUIDE (what the whole picture shows; applies to every tile): a rain-soaked alley at dusk, neon signs
+
+CONTENT-TYPE RULES (Realistic character): Realistic character. Identity lock: this is a specific individual design, so keep the exact same face or head shape, features, expression, gaze direction, proportions, markings, hairstyle or fur pattern and outfit or armour design; never change who or what they are. Regenerate real detail inside what exists: skin texture (pores, fine lines, peach fuzz), eyes (iris detail, eyelashes, the catchlights already there), lips, teeth, eyebrow hairs, individual hair strands, fabric weave and stitching, jewellery and metal. Hands and fingers keep their exact count, pose and proportions. Keep skin tone, age, makeup and every freckle, scar and mole where it is. Do not beautify, smooth, retouch, slim, change features, or add accessories.
+
+FIDELITY: STRICT. Change nothing except image quality: remove noise and blur and recover fine detail while every shape, colour and element stays exactly where it is.
+
+Avoid: changed face, different person, extra fingers, distorted hands.
+
+4. QUALITY
+- Clean edges without halos, ringing or over-sharpening; less compression noise and artifacts; smooth gradients without banding; no artificial detail patterns.
+
+5. OUTPUT RESOLUTION (REQUIRED)
+- Generate a HIGH-RESOLUTION image: at least 2K (2048 px on the longest side; higher is better, for example 4096 px if possible), with exactly the same aspect ratio as the attached image so the result can be placed back exactly over it.
+
+6. OUTPUT
+- Return the image itself, no text. No collage, no before/after, no borders, no labels, no watermark, no added text.
+
+FINAL PRIORITY: 1) EXACT GEOMETRY AND PROPORTIONS, 2) FIDELITY TO THE ATTACHED IMAGE AND THE MASTER GUIDE, 3) CONSISTENT, CONTENT-TYPE-CORRECT REGENERATED DETAIL."
+`;
+
+exports[`buildPrompt > golden prompts > char-realistic / edge 1`] = `
+"Edit the attached image: image-to-image enhancement. Do NOT create a new picture and do NOT reimagine anything. Return the SAME picture, restored and upscaled into a far more detailed, high-resolution version. Output exactly ONE image.
+
+1. EXACT GEOMETRY AND PROPORTIONS (HIGHEST PRIORITY)
+- IMPORTANT: this image is ONE TILE cut from a larger picture. Many neighbouring tiles are enhanced separately and then stitched back together, so ANY shift, stretch, warp or change of proportion creates a visible mismatch. The enhanced image must line up with the attached image pixel for pixel.
+- POSITION: this tile is the left edge of the full image.
+- Treat the attached image as a locked reference layer: if the result were placed exactly on top of it, every edge, contour, line, object, body part and facial feature must sit in the same position, with the same size and the same proportions.
+- Do not move, resize, rotate, bend, stretch, squash, slim, widen, lengthen or reshape anything. Straight lines must stay perfectly straight (window grids, building edges, poles, panel lines, text); curves keep their exact curvature; angles and perspective stay identical.
+- Keep the exact field of view and scale: no zoom, no crop, no reframing, no outpainting, no borders, the exact same aspect ratio.
+- Anything cut by an edge of the image stays cut at exactly the same place and angle. Do not complete or close objects at the border.
+- Do not add, remove, move, duplicate or replace any object, person, mark, sign, logo or text.
+
+2. COLOR AND LIGHT (NON-NEGOTIABLE)
+- Keep the original colour palette, hue, saturation, white balance, tonal balance, light direction, shadows, highlights and reflections. Do not make it brighter, darker, warmer, cooler, more saturated or more dramatic. No new light sources.
+
+3. CONSISTENCY ACROSS ALL TILES (VERY IMPORTANT)
+- Every tile of this picture must look as if it was enhanced in ONE pass by the same artist: the same style, the same rendering approach, the same density of added detail, the same texture scale and the same texture contrast.
+- The size of every texture and detail is set by the real (or painted) scale of the subject in the WHOLE picture, never by the size of this crop. A leaf, brick, pore, hair strand, brush stroke or fabric thread keeps the same size whether the tile shows a lot or only a little of it.
+- Add detail only INSIDE what already exists; where a detail is ambiguous, stay faithful to the original.
+
+MASTER GUIDE (what the whole picture shows; applies to every tile): a rain-soaked alley at dusk, neon signs
+
+CONTENT-TYPE RULES (Realistic character): Realistic character. Identity lock: this is a specific individual design, so keep the exact same face or head shape, features, expression, gaze direction, proportions, markings, hairstyle or fur pattern and outfit or armour design; never change who or what they are. Regenerate real detail inside what exists: skin texture (pores, fine lines, peach fuzz), eyes (iris detail, eyelashes, the catchlights already there), lips, teeth, eyebrow hairs, individual hair strands, fabric weave and stitching, jewellery and metal. Hands and fingers keep their exact count, pose and proportions. Keep skin tone, age, makeup and every freckle, scar and mole where it is. Do not beautify, smooth, retouch, slim, change features, or add accessories.
+
+FIDELITY: STRICT. Change nothing except image quality: remove noise and blur and recover fine detail while every shape, colour and element stays exactly where it is.
+
+Avoid: changed face, different person, extra fingers, distorted hands.
+
+4. QUALITY
+- Clean edges without halos, ringing or over-sharpening; less compression noise and artifacts; smooth gradients without banding; no artificial detail patterns.
+
+5. OUTPUT RESOLUTION (REQUIRED)
+- Generate a HIGH-RESOLUTION image: at least 2K (2048 px on the longest side; higher is better, for example 4096 px if possible), with exactly the same aspect ratio as the attached image so the result can be placed back exactly over it.
+
+6. OUTPUT
+- Return the image itself, no text. No collage, no before/after, no borders, no labels, no watermark, no added text.
+
+FINAL PRIORITY: 1) EXACT GEOMETRY AND PROPORTIONS, 2) FIDELITY TO THE ATTACHED IMAGE AND THE MASTER GUIDE, 3) CONSISTENT, CONTENT-TYPE-CORRECT REGENERATED DETAIL."
+`;
+
+exports[`buildPrompt > golden prompts > custom / center 1`] = `
+"Edit the attached image: image-to-image enhancement. Do NOT create a new picture and do NOT reimagine anything. Return the SAME picture, restored and upscaled into a far more detailed, high-resolution version. Output exactly ONE image.
+
+1. EXACT GEOMETRY AND PROPORTIONS (HIGHEST PRIORITY)
+- IMPORTANT: this image is ONE TILE cut from a larger picture. Many neighbouring tiles are enhanced separately and then stitched back together, so ANY shift, stretch, warp or change of proportion creates a visible mismatch. The enhanced image must line up with the attached image pixel for pixel.
+- POSITION: this tile is a central area of the full image.
+- Treat the attached image as a locked reference layer: if the result were placed exactly on top of it, every edge, contour, line, object, body part and facial feature must sit in the same position, with the same size and the same proportions.
+- Do not move, resize, rotate, bend, stretch, squash, slim, widen, lengthen or reshape anything. Straight lines must stay perfectly straight (window grids, building edges, poles, panel lines, text); curves keep their exact curvature; angles and perspective stay identical.
+- Keep the exact field of view and scale: no zoom, no crop, no reframing, no outpainting, no borders, the exact same aspect ratio.
+- Anything cut by an edge of the image stays cut at exactly the same place and angle. Do not complete or close objects at the border.
+- Do not add, remove, move, duplicate or replace any object, person, mark, sign, logo or text.
+
+2. COLOR AND LIGHT (NON-NEGOTIABLE)
+- Keep the original colour palette, hue, saturation, white balance, tonal balance, light direction, shadows, highlights and reflections. Do not make it brighter, darker, warmer, cooler, more saturated or more dramatic. No new light sources.
+
+3. CONSISTENCY ACROSS ALL TILES (VERY IMPORTANT)
+- Every tile of this picture must look as if it was enhanced in ONE pass by the same artist: the same style, the same rendering approach, the same density of added detail, the same texture scale and the same texture contrast.
+- The size of every texture and detail is set by the real (or painted) scale of the subject in the WHOLE picture, never by the size of this crop. A leaf, brick, pore, hair strand, brush stroke or fabric thread keeps the same size whether the tile shows a lot or only a little of it.
+- Add detail only INSIDE what already exists; where a detail is ambiguous, stay faithful to the original.
+
+MASTER GUIDE (what the whole picture shows; applies to every tile): a rain-soaked alley at dusk, neon signs
+
+CONTENT-TYPE RULES (Custom): General image. Add detail only inside what already exists, at the true scale of each subject in the whole picture. Identify materials and subjects from the MASTER GUIDE and regenerate them consistently in every tile.
+
+FIDELITY: BALANCED. Keep the subject and composition; surfaces and textures may be redrawn in more detail while staying faithful to the original design.
+
+4. QUALITY
+- Clean edges without halos, ringing or over-sharpening; less compression noise and artifacts; smooth gradients without banding; no artificial detail patterns.
+
+5. OUTPUT RESOLUTION (REQUIRED)
+- Generate a HIGH-RESOLUTION image: at least 2K (2048 px on the longest side; higher is better, for example 4096 px if possible), with exactly the same aspect ratio as the attached image so the result can be placed back exactly over it.
+
+6. OUTPUT
+- Return the image itself, no text. No collage, no before/after, no borders, no labels, no watermark, no added text.
+
+FINAL PRIORITY: 1) EXACT GEOMETRY AND PROPORTIONS, 2) FIDELITY TO THE ATTACHED IMAGE AND THE MASTER GUIDE, 3) CONSISTENT, CONTENT-TYPE-CORRECT REGENERATED DETAIL."
+`;
+
+exports[`buildPrompt > golden prompts > custom / corner 1`] = `
+"Edit the attached image: image-to-image enhancement. Do NOT create a new picture and do NOT reimagine anything. Return the SAME picture, restored and upscaled into a far more detailed, high-resolution version. Output exactly ONE image.
+
+1. EXACT GEOMETRY AND PROPORTIONS (HIGHEST PRIORITY)
+- IMPORTANT: this image is ONE TILE cut from a larger picture. Many neighbouring tiles are enhanced separately and then stitched back together, so ANY shift, stretch, warp or change of proportion creates a visible mismatch. The enhanced image must line up with the attached image pixel for pixel.
+- POSITION: this tile is the top-right corner of the full image.
+- Treat the attached image as a locked reference layer: if the result were placed exactly on top of it, every edge, contour, line, object, body part and facial feature must sit in the same position, with the same size and the same proportions.
+- Do not move, resize, rotate, bend, stretch, squash, slim, widen, lengthen or reshape anything. Straight lines must stay perfectly straight (window grids, building edges, poles, panel lines, text); curves keep their exact curvature; angles and perspective stay identical.
+- Keep the exact field of view and scale: no zoom, no crop, no reframing, no outpainting, no borders, the exact same aspect ratio.
+- Anything cut by an edge of the image stays cut at exactly the same place and angle. Do not complete or close objects at the border.
+- Do not add, remove, move, duplicate or replace any object, person, mark, sign, logo or text.
+
+2. COLOR AND LIGHT (NON-NEGOTIABLE)
+- Keep the original colour palette, hue, saturation, white balance, tonal balance, light direction, shadows, highlights and reflections. Do not make it brighter, darker, warmer, cooler, more saturated or more dramatic. No new light sources.
+
+3. CONSISTENCY ACROSS ALL TILES (VERY IMPORTANT)
+- Every tile of this picture must look as if it was enhanced in ONE pass by the same artist: the same style, the same rendering approach, the same density of added detail, the same texture scale and the same texture contrast.
+- The size of every texture and detail is set by the real (or painted) scale of the subject in the WHOLE picture, never by the size of this crop. A leaf, brick, pore, hair strand, brush stroke or fabric thread keeps the same size whether the tile shows a lot or only a little of it.
+- Add detail only INSIDE what already exists; where a detail is ambiguous, stay faithful to the original.
+
+MASTER GUIDE (what the whole picture shows; applies to every tile): a rain-soaked alley at dusk, neon signs
+
+CONTENT-TYPE RULES (Custom): General image. Add detail only inside what already exists, at the true scale of each subject in the whole picture. Identify materials and subjects from the MASTER GUIDE and regenerate them consistently in every tile.
+
+FIDELITY: BALANCED. Keep the subject and composition; surfaces and textures may be redrawn in more detail while staying faithful to the original design.
+
+4. QUALITY
+- Clean edges without halos, ringing or over-sharpening; less compression noise and artifacts; smooth gradients without banding; no artificial detail patterns.
+
+5. OUTPUT RESOLUTION (REQUIRED)
+- Generate a HIGH-RESOLUTION image: at least 2K (2048 px on the longest side; higher is better, for example 4096 px if possible), with exactly the same aspect ratio as the attached image so the result can be placed back exactly over it.
+
+6. OUTPUT
+- Return the image itself, no text. No collage, no before/after, no borders, no labels, no watermark, no added text.
+
+FINAL PRIORITY: 1) EXACT GEOMETRY AND PROPORTIONS, 2) FIDELITY TO THE ATTACHED IMAGE AND THE MASTER GUIDE, 3) CONSISTENT, CONTENT-TYPE-CORRECT REGENERATED DETAIL."
+`;
+
+exports[`buildPrompt > golden prompts > custom / edge 1`] = `
+"Edit the attached image: image-to-image enhancement. Do NOT create a new picture and do NOT reimagine anything. Return the SAME picture, restored and upscaled into a far more detailed, high-resolution version. Output exactly ONE image.
+
+1. EXACT GEOMETRY AND PROPORTIONS (HIGHEST PRIORITY)
+- IMPORTANT: this image is ONE TILE cut from a larger picture. Many neighbouring tiles are enhanced separately and then stitched back together, so ANY shift, stretch, warp or change of proportion creates a visible mismatch. The enhanced image must line up with the attached image pixel for pixel.
+- POSITION: this tile is the left edge of the full image.
+- Treat the attached image as a locked reference layer: if the result were placed exactly on top of it, every edge, contour, line, object, body part and facial feature must sit in the same position, with the same size and the same proportions.
+- Do not move, resize, rotate, bend, stretch, squash, slim, widen, lengthen or reshape anything. Straight lines must stay perfectly straight (window grids, building edges, poles, panel lines, text); curves keep their exact curvature; angles and perspective stay identical.
+- Keep the exact field of view and scale: no zoom, no crop, no reframing, no outpainting, no borders, the exact same aspect ratio.
+- Anything cut by an edge of the image stays cut at exactly the same place and angle. Do not complete or close objects at the border.
+- Do not add, remove, move, duplicate or replace any object, person, mark, sign, logo or text.
+
+2. COLOR AND LIGHT (NON-NEGOTIABLE)
+- Keep the original colour palette, hue, saturation, white balance, tonal balance, light direction, shadows, highlights and reflections. Do not make it brighter, darker, warmer, cooler, more saturated or more dramatic. No new light sources.
+
+3. CONSISTENCY ACROSS ALL TILES (VERY IMPORTANT)
+- Every tile of this picture must look as if it was enhanced in ONE pass by the same artist: the same style, the same rendering approach, the same density of added detail, the same texture scale and the same texture contrast.
+- The size of every texture and detail is set by the real (or painted) scale of the subject in the WHOLE picture, never by the size of this crop. A leaf, brick, pore, hair strand, brush stroke or fabric thread keeps the same size whether the tile shows a lot or only a little of it.
+- Add detail only INSIDE what already exists; where a detail is ambiguous, stay faithful to the original.
+
+MASTER GUIDE (what the whole picture shows; applies to every tile): a rain-soaked alley at dusk, neon signs
+
+CONTENT-TYPE RULES (Custom): General image. Add detail only inside what already exists, at the true scale of each subject in the whole picture. Identify materials and subjects from the MASTER GUIDE and regenerate them consistently in every tile.
+
+FIDELITY: BALANCED. Keep the subject and composition; surfaces and textures may be redrawn in more detail while staying faithful to the original design.
+
+4. QUALITY
+- Clean edges without halos, ringing or over-sharpening; less compression noise and artifacts; smooth gradients without banding; no artificial detail patterns.
+
+5. OUTPUT RESOLUTION (REQUIRED)
+- Generate a HIGH-RESOLUTION image: at least 2K (2048 px on the longest side; higher is better, for example 4096 px if possible), with exactly the same aspect ratio as the attached image so the result can be placed back exactly over it.
+
+6. OUTPUT
+- Return the image itself, no text. No collage, no before/after, no borders, no labels, no watermark, no added text.
+
+FINAL PRIORITY: 1) EXACT GEOMETRY AND PROPORTIONS, 2) FIDELITY TO THE ATTACHED IMAGE AND THE MASTER GUIDE, 3) CONSISTENT, CONTENT-TYPE-CORRECT REGENERATED DETAIL."
+`;
+
+exports[`buildPrompt > golden prompts > env-realistic / center 1`] = `
+"Edit the attached image: image-to-image enhancement. Do NOT create a new picture and do NOT reimagine anything. Return the SAME picture, restored and upscaled into a far more detailed, high-resolution version. Output exactly ONE image.
+
+1. EXACT GEOMETRY AND PROPORTIONS (HIGHEST PRIORITY)
+- IMPORTANT: this image is ONE TILE cut from a larger picture. Many neighbouring tiles are enhanced separately and then stitched back together, so ANY shift, stretch, warp or change of proportion creates a visible mismatch. The enhanced image must line up with the attached image pixel for pixel.
+- POSITION: this tile is a central area of the full image.
+- Treat the attached image as a locked reference layer: if the result were placed exactly on top of it, every edge, contour, line, object, body part and facial feature must sit in the same position, with the same size and the same proportions.
+- Do not move, resize, rotate, bend, stretch, squash, slim, widen, lengthen or reshape anything. Straight lines must stay perfectly straight (window grids, building edges, poles, panel lines, text); curves keep their exact curvature; angles and perspective stay identical.
+- Keep the exact field of view and scale: no zoom, no crop, no reframing, no outpainting, no borders, the exact same aspect ratio.
+- Anything cut by an edge of the image stays cut at exactly the same place and angle. Do not complete or close objects at the border.
+- Do not add, remove, move, duplicate or replace any object, person, mark, sign, logo or text.
+
+2. COLOR AND LIGHT (NON-NEGOTIABLE)
+- Keep the original colour palette, hue, saturation, white balance, tonal balance, light direction, shadows, highlights and reflections. Do not make it brighter, darker, warmer, cooler, more saturated or more dramatic. No new light sources.
+
+3. CONSISTENCY ACROSS ALL TILES (VERY IMPORTANT)
+- Every tile of this picture must look as if it was enhanced in ONE pass by the same artist: the same style, the same rendering approach, the same density of added detail, the same texture scale and the same texture contrast.
+- The size of every texture and detail is set by the real (or painted) scale of the subject in the WHOLE picture, never by the size of this crop. A leaf, brick, pore, hair strand, brush stroke or fabric thread keeps the same size whether the tile shows a lot or only a little of it.
+- Add detail only INSIDE what already exists; where a detail is ambiguous, stay faithful to the original.
+
+MASTER GUIDE (what the whole picture shows; applies to every tile): a rain-soaked alley at dusk, neon signs
+
+CONTENT-TYPE RULES (Realistic environment): Photoreal environment. Regenerate real-world surface detail inside the existing shapes: stone and brick grain, mortar, bark, leaf and grass blades, water ripples, cloud structure, weathering, dirt and moisture, each at the true scale of the whole scene, so a brick or leaf is the same size in every tile. Keep the atmospheric haze, depth of field and distance falloff of the original: do not sharpen distant areas beyond what their distance allows. Do not add plants, debris, props or people.
+
+FIDELITY: PRESERVE. Same content and composition; enrich it with finer, more convincing detail without adding or removing anything.
+
+Avoid: cartoon look, oversaturated colors, distorted perspective.
+
+4. QUALITY
+- Clean edges without halos, ringing or over-sharpening; less compression noise and artifacts; smooth gradients without banding; no artificial detail patterns.
+
+5. OUTPUT RESOLUTION (REQUIRED)
+- Generate a HIGH-RESOLUTION image: at least 2K (2048 px on the longest side; higher is better, for example 4096 px if possible), with exactly the same aspect ratio as the attached image so the result can be placed back exactly over it.
+
+6. OUTPUT
+- Return the image itself, no text. No collage, no before/after, no borders, no labels, no watermark, no added text.
+
+FINAL PRIORITY: 1) EXACT GEOMETRY AND PROPORTIONS, 2) FIDELITY TO THE ATTACHED IMAGE AND THE MASTER GUIDE, 3) CONSISTENT, CONTENT-TYPE-CORRECT REGENERATED DETAIL."
+`;
+
+exports[`buildPrompt > golden prompts > env-realistic / corner 1`] = `
+"Edit the attached image: image-to-image enhancement. Do NOT create a new picture and do NOT reimagine anything. Return the SAME picture, restored and upscaled into a far more detailed, high-resolution version. Output exactly ONE image.
+
+1. EXACT GEOMETRY AND PROPORTIONS (HIGHEST PRIORITY)
+- IMPORTANT: this image is ONE TILE cut from a larger picture. Many neighbouring tiles are enhanced separately and then stitched back together, so ANY shift, stretch, warp or change of proportion creates a visible mismatch. The enhanced image must line up with the attached image pixel for pixel.
+- POSITION: this tile is the top-right corner of the full image.
+- Treat the attached image as a locked reference layer: if the result were placed exactly on top of it, every edge, contour, line, object, body part and facial feature must sit in the same position, with the same size and the same proportions.
+- Do not move, resize, rotate, bend, stretch, squash, slim, widen, lengthen or reshape anything. Straight lines must stay perfectly straight (window grids, building edges, poles, panel lines, text); curves keep their exact curvature; angles and perspective stay identical.
+- Keep the exact field of view and scale: no zoom, no crop, no reframing, no outpainting, no borders, the exact same aspect ratio.
+- Anything cut by an edge of the image stays cut at exactly the same place and angle. Do not complete or close objects at the border.
+- Do not add, remove, move, duplicate or replace any object, person, mark, sign, logo or text.
+
+2. COLOR AND LIGHT (NON-NEGOTIABLE)
+- Keep the original colour palette, hue, saturation, white balance, tonal balance, light direction, shadows, highlights and reflections. Do not make it brighter, darker, warmer, cooler, more saturated or more dramatic. No new light sources.
+
+3. CONSISTENCY ACROSS ALL TILES (VERY IMPORTANT)
+- Every tile of this picture must look as if it was enhanced in ONE pass by the same artist: the same style, the same rendering approach, the same density of added detail, the same texture scale and the same texture contrast.
+- The size of every texture and detail is set by the real (or painted) scale of the subject in the WHOLE picture, never by the size of this crop. A leaf, brick, pore, hair strand, brush stroke or fabric thread keeps the same size whether the tile shows a lot or only a little of it.
+- Add detail only INSIDE what already exists; where a detail is ambiguous, stay faithful to the original.
+
+MASTER GUIDE (what the whole picture shows; applies to every tile): a rain-soaked alley at dusk, neon signs
+
+CONTENT-TYPE RULES (Realistic environment): Photoreal environment. Regenerate real-world surface detail inside the existing shapes: stone and brick grain, mortar, bark, leaf and grass blades, water ripples, cloud structure, weathering, dirt and moisture, each at the true scale of the whole scene, so a brick or leaf is the same size in every tile. Keep the atmospheric haze, depth of field and distance falloff of the original: do not sharpen distant areas beyond what their distance allows. Do not add plants, debris, props or people.
+
+FIDELITY: PRESERVE. Same content and composition; enrich it with finer, more convincing detail without adding or removing anything.
+
+Avoid: cartoon look, oversaturated colors, distorted perspective.
+
+4. QUALITY
+- Clean edges without halos, ringing or over-sharpening; less compression noise and artifacts; smooth gradients without banding; no artificial detail patterns.
+
+5. OUTPUT RESOLUTION (REQUIRED)
+- Generate a HIGH-RESOLUTION image: at least 2K (2048 px on the longest side; higher is better, for example 4096 px if possible), with exactly the same aspect ratio as the attached image so the result can be placed back exactly over it.
+
+6. OUTPUT
+- Return the image itself, no text. No collage, no before/after, no borders, no labels, no watermark, no added text.
+
+FINAL PRIORITY: 1) EXACT GEOMETRY AND PROPORTIONS, 2) FIDELITY TO THE ATTACHED IMAGE AND THE MASTER GUIDE, 3) CONSISTENT, CONTENT-TYPE-CORRECT REGENERATED DETAIL."
+`;
+
+exports[`buildPrompt > golden prompts > env-realistic / edge 1`] = `
+"Edit the attached image: image-to-image enhancement. Do NOT create a new picture and do NOT reimagine anything. Return the SAME picture, restored and upscaled into a far more detailed, high-resolution version. Output exactly ONE image.
+
+1. EXACT GEOMETRY AND PROPORTIONS (HIGHEST PRIORITY)
+- IMPORTANT: this image is ONE TILE cut from a larger picture. Many neighbouring tiles are enhanced separately and then stitched back together, so ANY shift, stretch, warp or change of proportion creates a visible mismatch. The enhanced image must line up with the attached image pixel for pixel.
+- POSITION: this tile is the left edge of the full image.
+- Treat the attached image as a locked reference layer: if the result were placed exactly on top of it, every edge, contour, line, object, body part and facial feature must sit in the same position, with the same size and the same proportions.
+- Do not move, resize, rotate, bend, stretch, squash, slim, widen, lengthen or reshape anything. Straight lines must stay perfectly straight (window grids, building edges, poles, panel lines, text); curves keep their exact curvature; angles and perspective stay identical.
+- Keep the exact field of view and scale: no zoom, no crop, no reframing, no outpainting, no borders, the exact same aspect ratio.
+- Anything cut by an edge of the image stays cut at exactly the same place and angle. Do not complete or close objects at the border.
+- Do not add, remove, move, duplicate or replace any object, person, mark, sign, logo or text.
+
+2. COLOR AND LIGHT (NON-NEGOTIABLE)
+- Keep the original colour palette, hue, saturation, white balance, tonal balance, light direction, shadows, highlights and reflections. Do not make it brighter, darker, warmer, cooler, more saturated or more dramatic. No new light sources.
+
+3. CONSISTENCY ACROSS ALL TILES (VERY IMPORTANT)
+- Every tile of this picture must look as if it was enhanced in ONE pass by the same artist: the same style, the same rendering approach, the same density of added detail, the same texture scale and the same texture contrast.
+- The size of every texture and detail is set by the real (or painted) scale of the subject in the WHOLE picture, never by the size of this crop. A leaf, brick, pore, hair strand, brush stroke or fabric thread keeps the same size whether the tile shows a lot or only a little of it.
+- Add detail only INSIDE what already exists; where a detail is ambiguous, stay faithful to the original.
+
+MASTER GUIDE (what the whole picture shows; applies to every tile): a rain-soaked alley at dusk, neon signs
+
+CONTENT-TYPE RULES (Realistic environment): Photoreal environment. Regenerate real-world surface detail inside the existing shapes: stone and brick grain, mortar, bark, leaf and grass blades, water ripples, cloud structure, weathering, dirt and moisture, each at the true scale of the whole scene, so a brick or leaf is the same size in every tile. Keep the atmospheric haze, depth of field and distance falloff of the original: do not sharpen distant areas beyond what their distance allows. Do not add plants, debris, props or people.
+
+FIDELITY: PRESERVE. Same content and composition; enrich it with finer, more convincing detail without adding or removing anything.
+
+Avoid: cartoon look, oversaturated colors, distorted perspective.
+
+4. QUALITY
+- Clean edges without halos, ringing or over-sharpening; less compression noise and artifacts; smooth gradients without banding; no artificial detail patterns.
+
+5. OUTPUT RESOLUTION (REQUIRED)
+- Generate a HIGH-RESOLUTION image: at least 2K (2048 px on the longest side; higher is better, for example 4096 px if possible), with exactly the same aspect ratio as the attached image so the result can be placed back exactly over it.
+
+6. OUTPUT
+- Return the image itself, no text. No collage, no before/after, no borders, no labels, no watermark, no added text.
+
+FINAL PRIORITY: 1) EXACT GEOMETRY AND PROPORTIONS, 2) FIDELITY TO THE ATTACHED IMAGE AND THE MASTER GUIDE, 3) CONSISTENT, CONTENT-TYPE-CORRECT REGENERATED DETAIL."
+`;
+
+exports[`buildPrompt > golden prompts > texture-material / center 1`] = `
+"Edit the attached image: image-to-image enhancement. Do NOT create a new picture and do NOT reimagine anything. Return the SAME picture, restored and upscaled into a far more detailed, high-resolution version. Output exactly ONE image.
+
+1. EXACT GEOMETRY AND PROPORTIONS (HIGHEST PRIORITY)
+- IMPORTANT: this image is ONE TILE cut from a larger picture. Many neighbouring tiles are enhanced separately and then stitched back together, so ANY shift, stretch, warp or change of proportion creates a visible mismatch. The enhanced image must line up with the attached image pixel for pixel.
+- POSITION: this tile is a central area of the full image.
+- Treat the attached image as a locked reference layer: if the result were placed exactly on top of it, every edge, contour, line, object, body part and facial feature must sit in the same position, with the same size and the same proportions.
+- Do not move, resize, rotate, bend, stretch, squash, slim, widen, lengthen or reshape anything. Straight lines must stay perfectly straight (window grids, building edges, poles, panel lines, text); curves keep their exact curvature; angles and perspective stay identical.
+- Keep the exact field of view and scale: no zoom, no crop, no reframing, no outpainting, no borders, the exact same aspect ratio.
+- Anything cut by an edge of the image stays cut at exactly the same place and angle. Do not complete or close objects at the border.
+- Do not add, remove, move, duplicate or replace any object, person, mark, sign, logo or text.
+
+2. COLOR AND LIGHT (NON-NEGOTIABLE)
+- Keep the original colour palette, hue, saturation, white balance, tonal balance, light direction, shadows, highlights and reflections. Do not make it brighter, darker, warmer, cooler, more saturated or more dramatic. No new light sources.
+
+3. CONSISTENCY ACROSS ALL TILES (VERY IMPORTANT)
+- Every tile of this picture must look as if it was enhanced in ONE pass by the same artist: the same style, the same rendering approach, the same density of added detail, the same texture scale and the same texture contrast.
+- The size of every texture and detail is set by the real (or painted) scale of the subject in the WHOLE picture, never by the size of this crop. A leaf, brick, pore, hair strand, brush stroke or fabric thread keeps the same size whether the tile shows a lot or only a little of it.
+- Add detail only INSIDE what already exists; where a detail is ambiguous, stay faithful to the original.
+
+MASTER GUIDE (what the whole picture shows; applies to every tile): a rain-soaked alley at dusk, neon signs
+
+CONTENT-TYPE RULES (Texture / seamless material): Material texture sample that must stay seamless. Regenerate fine surface structure (grain, weave, pores, pits, scratches, fibres) uniformly at ONE fixed texture scale across the whole image. Keep the lighting flat and even: no baked-in shadows, vignette, gradients or perspective. The left and right edges, and the top and bottom edges, must still continue into each other as in the original, so never complete, close or reshape anything at the borders.
+
+FIDELITY: STRICT. Change nothing except image quality: remove noise and blur and recover fine detail while every shape, colour and element stays exactly where it is.
+
+Avoid: visible seams, vignette, uneven lighting, perspective distortion.
+
+4. QUALITY
+- Clean edges without halos, ringing or over-sharpening; less compression noise and artifacts; smooth gradients without banding; no artificial detail patterns.
+
+5. OUTPUT RESOLUTION (REQUIRED)
+- Generate a HIGH-RESOLUTION image: at least 2K (2048 px on the longest side; higher is better, for example 4096 px if possible), with exactly the same aspect ratio as the attached image so the result can be placed back exactly over it.
+
+6. OUTPUT
+- Return the image itself, no text. No collage, no before/after, no borders, no labels, no watermark, no added text.
+
+FINAL PRIORITY: 1) EXACT GEOMETRY AND PROPORTIONS, 2) FIDELITY TO THE ATTACHED IMAGE AND THE MASTER GUIDE, 3) CONSISTENT, CONTENT-TYPE-CORRECT REGENERATED DETAIL."
+`;
+
+exports[`buildPrompt > golden prompts > texture-material / corner 1`] = `
+"Edit the attached image: image-to-image enhancement. Do NOT create a new picture and do NOT reimagine anything. Return the SAME picture, restored and upscaled into a far more detailed, high-resolution version. Output exactly ONE image.
+
+1. EXACT GEOMETRY AND PROPORTIONS (HIGHEST PRIORITY)
+- IMPORTANT: this image is ONE TILE cut from a larger picture. Many neighbouring tiles are enhanced separately and then stitched back together, so ANY shift, stretch, warp or change of proportion creates a visible mismatch. The enhanced image must line up with the attached image pixel for pixel.
+- POSITION: this tile is the top-right corner of the full image.
+- Treat the attached image as a locked reference layer: if the result were placed exactly on top of it, every edge, contour, line, object, body part and facial feature must sit in the same position, with the same size and the same proportions.
+- Do not move, resize, rotate, bend, stretch, squash, slim, widen, lengthen or reshape anything. Straight lines must stay perfectly straight (window grids, building edges, poles, panel lines, text); curves keep their exact curvature; angles and perspective stay identical.
+- Keep the exact field of view and scale: no zoom, no crop, no reframing, no outpainting, no borders, the exact same aspect ratio.
+- Anything cut by an edge of the image stays cut at exactly the same place and angle. Do not complete or close objects at the border.
+- Do not add, remove, move, duplicate or replace any object, person, mark, sign, logo or text.
+
+2. COLOR AND LIGHT (NON-NEGOTIABLE)
+- Keep the original colour palette, hue, saturation, white balance, tonal balance, light direction, shadows, highlights and reflections. Do not make it brighter, darker, warmer, cooler, more saturated or more dramatic. No new light sources.
+
+3. CONSISTENCY ACROSS ALL TILES (VERY IMPORTANT)
+- Every tile of this picture must look as if it was enhanced in ONE pass by the same artist: the same style, the same rendering approach, the same density of added detail, the same texture scale and the same texture contrast.
+- The size of every texture and detail is set by the real (or painted) scale of the subject in the WHOLE picture, never by the size of this crop. A leaf, brick, pore, hair strand, brush stroke or fabric thread keeps the same size whether the tile shows a lot or only a little of it.
+- Add detail only INSIDE what already exists; where a detail is ambiguous, stay faithful to the original.
+
+MASTER GUIDE (what the whole picture shows; applies to every tile): a rain-soaked alley at dusk, neon signs
+
+CONTENT-TYPE RULES (Texture / seamless material): Material texture sample that must stay seamless. Regenerate fine surface structure (grain, weave, pores, pits, scratches, fibres) uniformly at ONE fixed texture scale across the whole image. Keep the lighting flat and even: no baked-in shadows, vignette, gradients or perspective. The left and right edges, and the top and bottom edges, must still continue into each other as in the original, so never complete, close or reshape anything at the borders.
+
+FIDELITY: STRICT. Change nothing except image quality: remove noise and blur and recover fine detail while every shape, colour and element stays exactly where it is.
+
+Avoid: visible seams, vignette, uneven lighting, perspective distortion.
+
+4. QUALITY
+- Clean edges without halos, ringing or over-sharpening; less compression noise and artifacts; smooth gradients without banding; no artificial detail patterns.
+
+5. OUTPUT RESOLUTION (REQUIRED)
+- Generate a HIGH-RESOLUTION image: at least 2K (2048 px on the longest side; higher is better, for example 4096 px if possible), with exactly the same aspect ratio as the attached image so the result can be placed back exactly over it.
+
+6. OUTPUT
+- Return the image itself, no text. No collage, no before/after, no borders, no labels, no watermark, no added text.
+
+FINAL PRIORITY: 1) EXACT GEOMETRY AND PROPORTIONS, 2) FIDELITY TO THE ATTACHED IMAGE AND THE MASTER GUIDE, 3) CONSISTENT, CONTENT-TYPE-CORRECT REGENERATED DETAIL."
+`;
+
+exports[`buildPrompt > golden prompts > texture-material / edge 1`] = `
+"Edit the attached image: image-to-image enhancement. Do NOT create a new picture and do NOT reimagine anything. Return the SAME picture, restored and upscaled into a far more detailed, high-resolution version. Output exactly ONE image.
+
+1. EXACT GEOMETRY AND PROPORTIONS (HIGHEST PRIORITY)
+- IMPORTANT: this image is ONE TILE cut from a larger picture. Many neighbouring tiles are enhanced separately and then stitched back together, so ANY shift, stretch, warp or change of proportion creates a visible mismatch. The enhanced image must line up with the attached image pixel for pixel.
+- POSITION: this tile is the left edge of the full image.
+- Treat the attached image as a locked reference layer: if the result were placed exactly on top of it, every edge, contour, line, object, body part and facial feature must sit in the same position, with the same size and the same proportions.
+- Do not move, resize, rotate, bend, stretch, squash, slim, widen, lengthen or reshape anything. Straight lines must stay perfectly straight (window grids, building edges, poles, panel lines, text); curves keep their exact curvature; angles and perspective stay identical.
+- Keep the exact field of view and scale: no zoom, no crop, no reframing, no outpainting, no borders, the exact same aspect ratio.
+- Anything cut by an edge of the image stays cut at exactly the same place and angle. Do not complete or close objects at the border.
+- Do not add, remove, move, duplicate or replace any object, person, mark, sign, logo or text.
+
+2. COLOR AND LIGHT (NON-NEGOTIABLE)
+- Keep the original colour palette, hue, saturation, white balance, tonal balance, light direction, shadows, highlights and reflections. Do not make it brighter, darker, warmer, cooler, more saturated or more dramatic. No new light sources.
+
+3. CONSISTENCY ACROSS ALL TILES (VERY IMPORTANT)
+- Every tile of this picture must look as if it was enhanced in ONE pass by the same artist: the same style, the same rendering approach, the same density of added detail, the same texture scale and the same texture contrast.
+- The size of every texture and detail is set by the real (or painted) scale of the subject in the WHOLE picture, never by the size of this crop. A leaf, brick, pore, hair strand, brush stroke or fabric thread keeps the same size whether the tile shows a lot or only a little of it.
+- Add detail only INSIDE what already exists; where a detail is ambiguous, stay faithful to the original.
+
+MASTER GUIDE (what the whole picture shows; applies to every tile): a rain-soaked alley at dusk, neon signs
+
+CONTENT-TYPE RULES (Texture / seamless material): Material texture sample that must stay seamless. Regenerate fine surface structure (grain, weave, pores, pits, scratches, fibres) uniformly at ONE fixed texture scale across the whole image. Keep the lighting flat and even: no baked-in shadows, vignette, gradients or perspective. The left and right edges, and the top and bottom edges, must still continue into each other as in the original, so never complete, close or reshape anything at the borders.
+
+FIDELITY: STRICT. Change nothing except image quality: remove noise and blur and recover fine detail while every shape, colour and element stays exactly where it is.
+
+Avoid: visible seams, vignette, uneven lighting, perspective distortion.
+
+4. QUALITY
+- Clean edges without halos, ringing or over-sharpening; less compression noise and artifacts; smooth gradients without banding; no artificial detail patterns.
+
+5. OUTPUT RESOLUTION (REQUIRED)
+- Generate a HIGH-RESOLUTION image: at least 2K (2048 px on the longest side; higher is better, for example 4096 px if possible), with exactly the same aspect ratio as the attached image so the result can be placed back exactly over it.
+
+6. OUTPUT
+- Return the image itself, no text. No collage, no before/after, no borders, no labels, no watermark, no added text.
+
+FINAL PRIORITY: 1) EXACT GEOMETRY AND PROPORTIONS, 2) FIDELITY TO THE ATTACHED IMAGE AND THE MASTER GUIDE, 3) CONSISTENT, CONTENT-TYPE-CORRECT REGENERATED DETAIL."
+`;

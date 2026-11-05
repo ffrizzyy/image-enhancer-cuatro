@@ -1,0 +1,25 @@
+{
+  "id": "char-realistic",
+  "name": "Realistic character",
+  "kind": "prompt",
+  "family": "character",
+  "fidelity": "strict",
+  "template": "MASTER GUIDE (what the whole picture shows; applies to every tile): {{userPrompt}}\n\nCONTENT-TYPE RULES (Realistic character): Realistic character. Identity lock: this is a specific individual design, so keep the exact same face or head shape, features, expression, gaze direction, proportions, markings, hairstyle or fur pattern and outfit or armour design; never change who or what they are. Regenerate real detail inside what exists: skin texture (pores, fine lines, peach fuzz), eyes (iris detail, eyelashes, the catchlights already there), lips, teeth, eyebrow hairs, individual hair strands, fabric weave and stitching, jewellery and metal. Hands and fingers keep their exact count, pose and proportions. Keep skin tone, age, makeup and every freckle, scar and mole where it is. Do not beautify, smooth, retouch, slim, change features, or add accessories.\n\n{{fidelityClause}}",
+  "defaultPrompt": "A realistic character (photograph or photoreal render). Keep the face, expression, pose, proportions, clothing and every mark exactly as shown; regenerate skin, hair, eye and fabric detail at the true scale of the whole figure.",
+  "negative": [
+    "changed face",
+    "different person",
+    "extra fingers",
+    "distorted hands"
+  ],
+  "defaults": {
+    "grid": [
+      2,
+      3
+    ],
+    "overlapPct": 20
+  },
+  "warnings": [
+    "Faces and hands split across tiles poorly: choose a grid that does not cut through faces."
+  ]
+}

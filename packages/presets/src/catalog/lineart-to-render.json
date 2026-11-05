@@ -1,0 +1,22 @@
+{
+  "id": "lineart-to-render",
+  "name": "Sketch / lineart to render",
+  "kind": "prompt",
+  "family": "stylize",
+  "fidelity": "balanced",
+  "template": "MASTER GUIDE (what the whole picture shows; applies to every tile): {{userPrompt}}\n\nCONTENT-TYPE RULES (Sketch / lineart to render): Sketch or line art being turned into a finished render. The linework is the locked layer: keep every line in its exact position and weight. Fill and shade INSIDE the lines, using the colours and materials named in the MASTER GUIDE; if it names none, use a neutral, restrained palette. For this content type, adding colour and shading is allowed (it overrides the colour rule in section 2), but never move, redraw or remove a line, and keep the same shading style, material scale and light direction in every tile.\n\n{{fidelityClause}}",
+  "defaultPrompt": "A sketch or line drawing to be rendered. Keep every line exactly where it is; add colour, shading and material detail inside the lines, following the notes below.",
+  "negative": [
+    "redrawn lines",
+    "lost linework",
+    "muddy colors"
+  ],
+  "defaults": {
+    "grid": [
+      2,
+      3
+    ],
+    "overlapPct": 15
+  },
+  "warnings": []
+}

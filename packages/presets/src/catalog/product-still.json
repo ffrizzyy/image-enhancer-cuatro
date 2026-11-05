@@ -1,0 +1,22 @@
+{
+  "id": "product-still",
+  "name": "Product / still life",
+  "kind": "prompt",
+  "family": "props",
+  "fidelity": "preserve",
+  "template": "MASTER GUIDE (what the whole picture shows; applies to every tile): {{userPrompt}}\n\nCONTENT-TYPE RULES (Product / still life): Product or still-life photograph. Regenerate material realism: glass, metal, plastic, ceramic, fabric, leather, paper. Keep highlights and reflections exactly as they are, soft shadows soft, and the background unchanged. Logos, labels, barcodes and printed text stay faithful in position, shape and spelling: never redraw, correct or invent them. Do not add reflections, dust, props or scratches.\n\n{{fidelityClause}}",
+  "defaultPrompt": "A product or still-life photograph. Keep the shape, colours, logos, text and reflections exactly as shown; regenerate clean, accurate material detail.",
+  "negative": [
+    "altered logos",
+    "changed text",
+    "harsh reflections"
+  ],
+  "defaults": {
+    "grid": [
+      2,
+      3
+    ],
+    "overlapPct": 15
+  },
+  "warnings": []
+}

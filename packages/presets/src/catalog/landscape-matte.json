@@ -1,0 +1,22 @@
+{
+  "id": "landscape-matte",
+  "name": "Landscape / matte painting",
+  "kind": "prompt",
+  "family": "environment",
+  "fidelity": "balanced",
+  "template": "MASTER GUIDE (what the whole picture shows; applies to every tile): {{userPrompt}}\n\nCONTENT-TYPE RULES (Landscape / matte painting): Landscape or matte painting. Keep the depth layering and atmospheric perspective: nearer layers carry finer detail, distant layers stay soft and hazy exactly as in the original. Regenerate terrain, rock, foliage clusters, cloud and water detail at one consistent scale across all tiles. Keep the sky gradient, horizon and light unchanged. Do not add elements, birds, people or structures.\n\n{{fidelityClause}}",
+  "defaultPrompt": "A landscape or matte painting. Keep the composition, the depth layers and the sky and light exactly as shown; regenerate terrain, foliage, rock, cloud and water detail at one consistent scale.",
+  "negative": [
+    "flat lighting",
+    "visible repetition",
+    "oversaturation"
+  ],
+  "defaults": {
+    "grid": [
+      2,
+      4
+    ],
+    "overlapPct": 15
+  },
+  "warnings": []
+}

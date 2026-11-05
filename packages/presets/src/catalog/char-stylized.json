@@ -1,0 +1,24 @@
+{
+  "id": "char-stylized",
+  "name": "Stylized character",
+  "kind": "prompt",
+  "family": "character",
+  "fidelity": "strict",
+  "template": "MASTER GUIDE (what the whole picture shows; applies to every tile): {{userPrompt}}\n\nCONTENT-TYPE RULES (Stylized character): Stylized character (illustrated, anime, cartoon or stylized 3D). Identity lock: this is a specific individual design, so keep the exact same face or head shape, features, expression, gaze direction, proportions, markings, hairstyle or fur pattern and outfit or armour design; never change who or what they are. Keep the exact line weight and linework style, the flat, cel or painted shading steps, the palette and the shape of every highlight. Regenerate clean, crisp lines and fills in place. Do not add realistic skin texture, pores, extra shading, new folds or new accessories, and keep the rendering identical in every tile.\n\n{{fidelityClause}}",
+  "defaultPrompt": "A stylized character (illustration, anime, cartoon or stylized 3D). Keep the design, palette, linework and shading exactly as shown; only clean and sharpen it, with no realism added.",
+  "negative": [
+    "changed design",
+    "different palette",
+    "distorted hands"
+  ],
+  "defaults": {
+    "grid": [
+      2,
+      3
+    ],
+    "overlapPct": 20
+  },
+  "warnings": [
+    "Faces and hands split across tiles poorly: choose a grid that does not cut through faces."
+  ]
+}

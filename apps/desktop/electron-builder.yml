@@ -1,0 +1,22 @@
+appId: local.image-enhancer
+productName: Image Enhancer
+directories:
+  output: release
+# main/preload/renderer are bundled into dist/ by scripts/build.mjs. Only native modules
+# (kept external there) ship as node_modules; electron-builder adds production `dependencies`.
+files:
+  - dist/**
+  - package.json
+asar: true
+# Native binaries cannot be loaded from inside the asar archive.
+asarUnpack:
+  - '**/node_modules/sharp/**'
+  - '**/node_modules/@img/**'
+# v1 targets Windows only; macOS/Linux are post-v1.
+win:
+  target:
+    - dir
+# Native modules: list each under `dependencies`, keep it external in scripts/build.mjs, and
+# electron-builder rebuilds it against Electron's ABI at package time.
+# `pnpm --filter @ie/desktop rebuild:native` runs @electron/rebuild by hand for local dev.
+npmRebuild: true

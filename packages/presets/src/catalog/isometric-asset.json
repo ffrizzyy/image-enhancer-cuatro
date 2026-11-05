@@ -1,0 +1,22 @@
+{
+  "id": "isometric-asset",
+  "name": "Isometric game asset",
+  "kind": "prompt",
+  "family": "props",
+  "fidelity": "preserve",
+  "template": "MASTER GUIDE (what the whole picture shows; applies to every tile): {{userPrompt}}\n\nCONTENT-TYPE RULES (Isometric game asset): Isometric game asset. Keep the fixed isometric camera angle and edge directions exactly, a clean silhouette, and one consistent light direction with matching shadow. Regenerate material detail (stone, wood, metal, foliage, paint) at one fixed scale across all tiles. Do not change the perspective, add a background, ground shadow or extra parts, and do not soften the edges.\n\n{{fidelityClause}}",
+  "defaultPrompt": "An isometric game asset. Keep the fixed camera angle, silhouette, colours and light direction exactly as shown; regenerate clean edges and material detail at one scale.",
+  "negative": [
+    "changed camera angle",
+    "inconsistent shadows",
+    "perspective distortion"
+  ],
+  "defaults": {
+    "grid": [
+      2,
+      3
+    ],
+    "overlapPct": 15
+  },
+  "warnings": []
+}

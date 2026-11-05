@@ -1,0 +1,22 @@
+{
+  "id": "props-stylized",
+  "name": "Stylized props",
+  "kind": "prompt",
+  "family": "props",
+  "fidelity": "balanced",
+  "template": "MASTER GUIDE (what the whole picture shows; applies to every tile): {{userPrompt}}\n\nCONTENT-TYPE RULES (Stylized props): Stylized props. Keep bold, readable silhouettes and the existing hand-painted look: the same brush texture scale, edge treatment and shading style. Clean and crisp the painted detail inside existing shapes. Do not add realism, extra highlights, outlines or decoration, and keep the painted texture size identical in every tile.\n\n{{fidelityClause}}",
+  "defaultPrompt": "Stylized props and objects. Keep the bold readable silhouettes and the hand-painted look exactly; only clean and crisp the painted detail, with no added realism.",
+  "negative": [
+    "photorealism",
+    "muddy detail",
+    "broken silhouettes"
+  ],
+  "defaults": {
+    "grid": [
+      2,
+      3
+    ],
+    "overlapPct": 15
+  },
+  "warnings": []
+}

@@ -1,0 +1,22 @@
+{
+  "id": "env-realistic",
+  "name": "Realistic environment",
+  "kind": "prompt",
+  "family": "environment",
+  "fidelity": "preserve",
+  "template": "MASTER GUIDE (what the whole picture shows; applies to every tile): {{userPrompt}}\n\nCONTENT-TYPE RULES (Realistic environment): Photoreal environment. Regenerate real-world surface detail inside the existing shapes: stone and brick grain, mortar, bark, leaf and grass blades, water ripples, cloud structure, weathering, dirt and moisture, each at the true scale of the whole scene, so a brick or leaf is the same size in every tile. Keep the atmospheric haze, depth of field and distance falloff of the original: do not sharpen distant areas beyond what their distance allows. Do not add plants, debris, props or people.\n\n{{fidelityClause}}",
+  "defaultPrompt": "A realistic environment (photograph or photoreal render). Keep every structure, plant, prop, surface and the lighting exactly as shown; regenerate real-world material detail (stone, brick, wood, foliage, water, sky) at the true scale of the whole scene.",
+  "negative": [
+    "cartoon look",
+    "oversaturated colors",
+    "distorted perspective"
+  ],
+  "defaults": {
+    "grid": [
+      2,
+      3
+    ],
+    "overlapPct": 15
+  },
+  "warnings": []
+}

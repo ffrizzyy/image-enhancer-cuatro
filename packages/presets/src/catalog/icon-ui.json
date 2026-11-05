@@ -1,0 +1,22 @@
+{
+  "id": "icon-ui",
+  "name": "Icon / UI element",
+  "kind": "prompt",
+  "family": "stylize",
+  "fidelity": "strict",
+  "template": "MASTER GUIDE (what the whole picture shows; applies to every tile): {{userPrompt}}\n\nCONTENT-TYPE RULES (Icon / UI element): Icon or UI element. Keep edges crisp and every shape, stroke width, corner radius and symmetry exact. Keep the style (flat or glossy) as in the source; gradients are rebuilt smoothly without banding. A transparent or plain background stays plain: do not add shadows, textures or glow. Glyphs, letters and symbols stay unchanged.\n\n{{fidelityClause}}",
+  "defaultPrompt": "An icon or UI element. Keep the shapes, symmetry, colours and style (flat or glossy) exactly as shown; regenerate crisp edges and smooth gradients.",
+  "negative": [
+    "blurry edges",
+    "background clutter",
+    "changed shape"
+  ],
+  "defaults": {
+    "grid": [
+      2,
+      2
+    ],
+    "overlapPct": 10
+  },
+  "warnings": []
+}

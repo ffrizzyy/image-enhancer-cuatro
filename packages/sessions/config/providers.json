@@ -1,0 +1,41 @@
+{
+  "gpt": {
+    "loginUrl": "https://chatgpt.com/auth/login",
+    "probes": {
+      "ready": ["#prompt-textarea"],
+      "loggedOut": ["[data-testid='login-button']", "a[href*='/auth/login']"],
+      "challenge": ["iframe[src*='challenges.cloudflare.com']", "#challenge-form"],
+      "quota": []
+    },
+    "textMarkers": {
+      "challenge": ["verify you are human", "checking your browser"],
+      "quota": ["you've reached your", "usage cap", "too many requests"]
+    }
+  },
+  "gemini": {
+    "loginUrl": "https://gemini.google.com/app",
+    "probes": {
+      "ready": ["rich-textarea", ".ql-editor[contenteditable='true']"],
+      "loggedOut": ["a[href*='accounts.google.com/ServiceLogin']", "a[href*='accounts.google.com/signin']"],
+      "challenge": ["iframe[src*='recaptcha']", "#captcha-form"],
+      "quota": []
+    },
+    "textMarkers": {
+      "challenge": ["unusual traffic", "verify it's you"],
+      "quota": ["reached your limit", "come back tomorrow", "usage limit"]
+    }
+  },
+  "grok": {
+    "loginUrl": "https://grok.com/",
+    "probes": {
+      "ready": ["textarea[aria-label*='Ask']", "div[contenteditable='true'][role='textbox']"],
+      "loggedOut": ["a[href*='/sign-in']", "button[data-testid='sign-in']"],
+      "challenge": ["iframe[src*='challenges.cloudflare.com']", "#cf-challenge"],
+      "quota": []
+    },
+    "textMarkers": {
+      "challenge": ["verify you are human", "just a moment"],
+      "quota": ["rate limit", "reached your limit", "try again later"]
+    }
+  }
+}
