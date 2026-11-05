@@ -162,8 +162,13 @@ export async function runProviderTool({ command, provider, type, open, attach, c
       const driver = new ElectronPageDriver(session.view.native);
       // Optional steps, to reveal controls that only exist after an interaction. Nothing is ever submitted.
       if (type) {
-        const composer = providersConfig[provider].probes.ready[0] ?? '';
-        const prompt = (await driver.count('.ql-editor[contenteditable="true"]')) > 0 ? '.ql-editor[contenteditable="true"]' : composer;
+        let prompt = providersConfig[provider].probes.ready[0] ?? '';
+        for (const candidate of ['.ql-editor[contenteditable="true"]', '.ProseMirror[contenteditable="true"]', 'textarea']) {
+          if ((await driver.count(candidate)) > 0) {
+            prompt = candidate;
+            break;
+          }
+        }
         log(`typing a draft (not sent) into ${prompt}`);
         await driver.insertText(prompt, type);
         await sleep(1000);
