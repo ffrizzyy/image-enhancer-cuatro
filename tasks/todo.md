@@ -64,7 +64,7 @@ Parallel tracks: slicer (T14–T16), providers (T17–T19), stitcher (T20–T22)
 ## Phase 3 — Orchestration and Run UI
 
 - [x] **T23** Orchestrator: SQLite store — deps: T2
-- [ ] **T24** Orchestrator: job state machine and resume — deps: T23
+- [x] **T24** Orchestrator: job state machine and resume — deps: T23
 - [ ] **T25** Orchestrator: full job runner and simulation CLI — deps: T24, T17, T14, T15, T10, T11
 - [ ] **T26** Orchestrator: pauses, backoff, cancel, crash recovery — deps: T25, T8
 - [ ] **T27** Run screen: tile grid and live progress — deps: T4, T25

@@ -854,6 +854,11 @@ and `paused` jobs, skipping accepted tiles.
 **Files likely touched:** `src/jobMachine.ts`, `src/resume.ts`, `test/jobMachine.test.ts`, `test/resume.prop.test.ts`
 **Estimated scope:** M (4 files)
 
+**T24 outcome (2026-11-05):** XState v5 machines for jobs (`jobMachine.ts`) and tiles (`tileMachine.ts`), applied to the store atomically (`applyJobEvent`, `applyTileEvent`, `beginTile`: an illegal event throws and changes nothing), and `restoreJobs()` for startup.
+- Every (state, event) pair is checked against a hand-written table; `failed` and `cancelled` are final; `done` may re-run a tile or restitch (the Result screen's per-tile actions).
+- Restart: a tile cut off mid-attempt is queued again (its attempt is kept, marked `interrupted`, and does not use a retry); accepted tiles and their outputs are untouched; a paused job stays paused; a job caught in preflight returns to idle; a stitching job is flagged to restitch; terminal and finished jobs are never touched. Idempotent.
+- Retries: up to 3 tries per tile (first plus two retries), then `needs-review`. A manual re-run starts a fresh allowance, via schema migration 2 (`tiles.attempt_base`).
+- fast-check properties over random runner/crash/pause/re-run sequences on a real database: accepted count never decreases and an accepted tile is never changed or run again; nothing is left running after a restart; at most one successful attempt per tile unless re-run; a tile starts again only via a re-run, a retry or a restart.
 ### Task 25: Orchestrator — full job runner and simulation CLI
 
 **Outcome:** an 8-tile job completes through the fake adapter with 20% injected failures.

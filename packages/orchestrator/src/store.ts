@@ -35,7 +35,10 @@ export interface TileRecord {
   jobId: string;
   index: number;
   state: TileState;
+  /** Attempts made so far, across re-runs. */
   attempts: number;
+  /** Attempts made before the latest manual re-run; automatic retries are counted from here. */
+  attemptBase: number;
   outputPath: string | null;
   promptOverride: string | null;
   note: string | null;
@@ -79,6 +82,7 @@ export interface JobStateChange {
 
 export interface TilePatch {
   state?: TileState;
+  attemptBase?: number;
   outputPath?: string | null;
   promptOverride?: string | null;
   note?: string | null;
@@ -172,6 +176,7 @@ const toTileRecord = (row: Row): TileRecord => ({
   index: Number(row.idx),
   state: row.state as TileState,
   attempts: Number(row.attempts),
+  attemptBase: Number(row.attempt_base),
   outputPath: asNullableString(row.output_path),
   promptOverride: asNullableString(row.prompt_override),
   note: asNullableString(row.note),
@@ -341,11 +346,12 @@ export function openStore(path: string, options: StoreOptions = {}): Store {
         const before = requireTile(jobId, index);
         const next = {
           state: patch.state ?? before.state,
+          attemptBase: patch.attemptBase ?? before.attemptBase,
           outputPath: patch.outputPath === undefined ? before.outputPath : patch.outputPath,
           promptOverride: patch.promptOverride === undefined ? before.promptOverride : patch.promptOverride,
           note: patch.note === undefined ? before.note : patch.note,
         };
-        run('UPDATE tiles SET state = ?, output_path = ?, prompt_override = ?, note = ?, updated_at = ? WHERE job_id = ? AND idx = ?', next.state, next.outputPath, next.promptOverride, next.note, stamp(), jobId, index);
+        run('UPDATE tiles SET state = ?, attempt_base = ?, output_path = ?, prompt_override = ?, note = ?, updated_at = ? WHERE job_id = ? AND idx = ?', next.state, next.attemptBase, next.outputPath, next.promptOverride, next.note, stamp(), jobId, index);
         if (next.state !== before.state) addEvent(jobId, 'info', `Tile ${index + 1}: ${before.state} → ${next.state}`);
         return requireTile(jobId, index);
       });

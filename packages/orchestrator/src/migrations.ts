@@ -83,4 +83,9 @@ CREATE TABLE events (
 CREATE INDEX events_job ON events (job_id, id);
 `,
   },
+  {
+    version: 2,
+    // A manual re-run gives a tile a fresh set of automatic retries: tries are counted from this attempt number.
+    sql: `ALTER TABLE tiles ADD COLUMN attempt_base INTEGER NOT NULL DEFAULT 0 CHECK (attempt_base >= 0);`,
+  },
 ];
