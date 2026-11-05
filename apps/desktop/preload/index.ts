@@ -14,6 +14,12 @@ export interface IeApi {
     import(path: IpcRequest<'intake.import'>['path']): Promise<IpcResult<IpcResponse<'intake.import'>>>;
     /** The only way a Job is created; called when the user presses Start. */
     createJob(request: IpcRequest<'intake.createJob'>): Promise<IpcResult<IpcResponse<'intake.createJob'>>>;
+    /** A downscaled picture of an imported image, to draw the tile grid over. */
+    preview(request: IpcRequest<'intake.preview'>): Promise<IpcResult<IpcResponse<'intake.preview'>>>;
+  };
+  slicer: {
+    /** The exact tile plan for the current grid; pure, never calls a provider. */
+    plan(request: IpcRequest<'slicer.plan'>): Promise<IpcResult<IpcResponse<'slicer.plan'>>>;
   };
   presets: {
     list(): Promise<IpcResult<IpcResponse<'presets.list'>>>;
@@ -49,6 +55,10 @@ const api: IeApi = {
   intake: {
     import: (path) => invoke('intake.import', { path }),
     createJob: (request) => invoke('intake.createJob', request),
+    preview: (request) => invoke('intake.preview', request),
+  },
+  slicer: {
+    plan: (request) => invoke('slicer.plan', request),
   },
   presets: {
     list: () => invoke('presets.list'),

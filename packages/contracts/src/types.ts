@@ -98,6 +98,8 @@ export interface JobGrid {
   rows: number;
   cols: number;
   overlapPct: number;
+  /** Seamless texture: the outer overlap wraps to the opposite edge. Absent means false. */
+  wrap?: boolean | undefined;
 }
 
 export interface Job {
@@ -111,6 +113,13 @@ export interface Job {
   categoryConfidence?: number | undefined;
   grid: JobGrid;
   providerId: ProviderId;
+}
+
+/** A small stand-in for an imported image, as a data URL. width x height is the preview's own size. */
+export interface ImagePreview {
+  dataUrl: string;
+  width: number;
+  height: number;
 }
 
 export interface CreateJobRequest {
@@ -310,6 +319,8 @@ export interface IpcContract {
   };
   'intake.import': { request: { path: string }; response: ImageAsset };
   'intake.createJob': { request: CreateJobRequest; response: Job };
+  /** A downscaled JPEG of an imported image, for drawing the tile grid over. Never leaves the machine. */
+  'intake.preview': { request: { assetId: string; maxSide?: number }; response: ImagePreview };
   'slicer.plan': {
     request: { assetId: string; grid: Grid; overlapPct: number; wrap?: boolean };
     response: TilePlan;

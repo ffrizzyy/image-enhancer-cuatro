@@ -4,10 +4,12 @@ import {
   type Category,
   type CategorySuggestion,
   type ImageAsset,
+  type ImagePreview,
   type Job,
   type JobSummary,
   type ProviderId,
   type SessionStatus,
+  type TilePlan,
 } from '@ie/contracts';
 import { create } from 'zustand';
 
@@ -17,6 +19,7 @@ import {
   detectionPrompt,
   emptyDraft,
   keptSuggestion,
+  gridErrors,
   startBlockReason,
   toCreateJobRequest,
   type GridMode,
@@ -30,8 +33,25 @@ export type DetectionState =
   | { status: 'ok'; suggestion: CategorySuggestion }
   | { status: 'error'; message: string };
 
+/**
+ * The tile plan for the current grid, as the slicer makes it. It is what the preview draws and what the job will use:
+ * the plan is deterministic, so the job (which carries the grid and wrap flag) reproduces it exactly.
+ */
+export type PlanState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'ok'; plan: TilePlan }
+  | { status: 'error'; message: string };
+
+/** A downscaled picture of the imported image, for the preview. */
+export interface PreviewState extends ImagePreview {
+  assetId: string;
+}
+
 /** Incremented whenever a detection starts or is cancelled, so a late response never overwrites newer state. */
 let detectionRun = 0;
+/** The same guard for plan requests, which are made on every change of the grid fields. */
+let planRun = 0;
 
 export const ROUTE_IDS = ['home', 'setup', 'run', 'result', 'settings'] as const;
 export type RouteId = (typeof ROUTE_IDS)[number];
@@ -68,6 +88,10 @@ interface ShellState {
   draft: JobDraft;
   /** Auto-detect result for the current image. Local only; never starts a job. */
   detection: DetectionState;
+  /** The tile plan for the draft's grid, kept alongside the draft. */
+  plan: PlanState;
+  preview: PreviewState | null;
+  previewError: string | null;
   /** Created by Start; execution arrives in Phase 3. */
   job: Job | null;
   starting: boolean;
@@ -95,8 +119,16 @@ interface ShellState {
   setGridMode: (mode: GridMode) => void;
   setGridField: (field: 'rows' | 'cols' | 'overlapPct', value: number) => void;
   setProvider: (provider: ProviderId) => void;
+  /** Asks the slicer for the plan of the current grid; invalid or missing input clears it. */
+  refreshPlan: () => Promise<void>;
+  /** Loads the preview picture once per image. */
+  loadPreview: () => Promise<void>;
   startJob: () => Promise<void>;
 }
+
+/** Whether the selected category asks for a seamless result (texture jobs). */
+export const wrapFor = (categories: Category[], categoryId: string | null): boolean =>
+  categories.find((c) => c.id === categoryId)?.wrap === true;
 
 export const needsRiskNotice = (settings: AppSettings): boolean =>
   !settings.firstRunAcknowledged || settings.riskNoticeVersion < CURRENT_RISK_NOTICE_VERSION;
@@ -116,6 +148,9 @@ export const useShellStore = create<ShellState>((set, get) => ({
   categoriesError: null,
   draft: emptyDraft(),
   detection: { status: 'idle' },
+  plan: { status: 'idle' },
+  preview: null,
+  previewError: null,
   job: null,
   starting: false,
   startError: null,
@@ -148,7 +183,18 @@ export const useShellStore = create<ShellState>((set, get) => ({
       if (result.ok) {
         // A new image invalidates any detection; Setup re-runs it if Auto is still selected.
         detectionRun++;
-        set({ importing: false, asset: result.value, job: null, startError: null, detection: { status: 'idle' }, route: 'setup' });
+        planRun++;
+        set({
+          importing: false,
+          asset: result.value,
+          job: null,
+          startError: null,
+          detection: { status: 'idle' },
+          plan: { status: 'idle' },
+          preview: null,
+          previewError: null,
+          route: 'setup',
+        });
       } else {
         set({ importing: false, importError: result.error });
       }
@@ -271,6 +317,34 @@ export const useShellStore = create<ShellState>((set, get) => ({
     // Opens the provider hidden so the monitor can report a live status for it.
     void get().openProvider(provider, false);
   },
+  refreshPlan: async () => {
+    const { asset, draft, categories } = get();
+    const run = ++planRun;
+    if (!asset || Object.keys(gridErrors(draft)).length > 0) {
+      set({ plan: { status: 'idle' } });
+      return;
+    }
+    set((state) => ({ plan: state.plan.status === 'ok' ? state.plan : { status: 'loading' } }));
+    try {
+      const wrap = wrapFor(categories, draft.categoryId);
+      const result = await ipc.slicer.plan({ assetId: asset.id, grid: { rows: draft.rows, cols: draft.cols }, overlapPct: draft.overlapPct, wrap });
+      if (run !== planRun) return;
+      set({ plan: result.ok ? { status: 'ok', plan: result.value } : { status: 'error', message: result.error.message } });
+    } catch (error) {
+      if (run === planRun) set({ plan: { status: 'error', message: `The tile preview failed: ${String(error)}` } });
+    }
+  },
+  loadPreview: async () => {
+    const { asset, preview } = get();
+    if (!asset || preview?.assetId === asset.id) return;
+    try {
+      const result = await ipc.intake.preview({ assetId: asset.id, maxSide: 1024 });
+      if (get().asset?.id !== asset.id) return;
+      set(result.ok ? { preview: { ...result.value, assetId: asset.id }, previewError: null } : { previewError: result.error.message });
+    } catch (error) {
+      set({ previewError: `The preview failed to load: ${String(error)}` });
+    }
+  },
   startJob: async () => {
     const { draft, asset, providers, starting, detection } = get();
     const detecting = detection.status === 'loading';
@@ -279,7 +353,7 @@ export const useShellStore = create<ShellState>((set, get) => ({
     const auto = keptSuggestion(draft, detection.status === 'ok' ? detection.suggestion : null);
     set({ starting: true, startError: null });
     try {
-      const result = await ipc.intake.createJob(toCreateJobRequest(draft, asset.id, auto));
+      const result = await ipc.intake.createJob(toCreateJobRequest(draft, asset.id, auto, wrapFor(get().categories, draft.categoryId)));
       if (result.ok) {
         set({ starting: false, job: result.value, route: 'run' });
       } else {

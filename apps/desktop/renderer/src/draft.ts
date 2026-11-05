@@ -140,18 +140,22 @@ export function detectionPrompt(draft: JobDraft, current: Category | undefined):
   return current?.defaultPrompt !== undefined && draft.prompt === current.defaultPrompt ? '' : draft.prompt;
 }
 
-/** Call only after `startBlockReason` returned null. Pass `auto` when the detected category is being kept. */
+/**
+ * Call only after `startBlockReason` returned null. Pass `auto` when the detected category is being kept, and `wrap`
+ * for a seamless-texture category: the job then carries what it needs to reproduce the previewed tile plan exactly.
+ */
 export function toCreateJobRequest(
   draft: JobDraft,
   assetId: string,
   auto: { confidence: number } | null = null,
+  wrap = false,
 ): CreateJobRequest {
   if (!draft.categoryId || !draft.providerId) throw new Error('draft is incomplete');
   return {
     assetId,
     prompt: draft.prompt,
     categoryId: draft.categoryId,
-    grid: { rows: draft.rows, cols: draft.cols, overlapPct: draft.overlapPct },
+    grid: { rows: draft.rows, cols: draft.cols, overlapPct: draft.overlapPct, ...(wrap ? { wrap: true } : {}) },
     providerId: draft.providerId,
     ...(auto ? { categorySource: 'auto' as const, categoryConfidence: auto.confidence } : {}),
   };

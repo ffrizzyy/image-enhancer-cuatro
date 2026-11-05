@@ -19,6 +19,10 @@ export const ipc = {
   intake: {
     import: (path: string) => window.ie.intake.import(path),
     createJob: (request: Parameters<IeApi['intake']['createJob']>[0]) => window.ie.intake.createJob(request),
+    preview: (request: Parameters<IeApi['intake']['preview']>[0]) => window.ie.intake.preview(request),
+  },
+  slicer: {
+    plan: (request: Parameters<IeApi['slicer']['plan']>[0]) => window.ie.slicer.plan(request),
   },
   presets: {
     list: () => window.ie.presets.list(),

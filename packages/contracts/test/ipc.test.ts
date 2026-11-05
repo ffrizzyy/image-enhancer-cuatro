@@ -100,6 +100,7 @@ describe('IPC channel map', () => {
         'presets.suggestCategory',
         'intake.import',
         'intake.createJob',
+        'intake.preview',
         'slicer.plan',
         'jobs.start',
         'jobs.pause',

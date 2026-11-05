@@ -787,6 +787,11 @@ optional global-pass hook (reference only), and the benchmark.
 - `seamScore` measures abrupt steps (second differences) of the stitched-over-source luminance ratio along each strip overlap, so noise, texture and content edges average out. Unit thresholds hold (seamScore <= 1.2, maxDeltaE <= 3 on shifted and colour-cast synthetic tiles, also in wrap mode). On the noisiest benchmark image it reads ~1.28 (white noise the blurred tiles do not have): informational, not asserted.
 - Harmonization corrects only the *variation* of drift across the image (a smooth 16-cell multiplicative field, wrap-aware), never the overall tone.
 - Deferred: the `metrics` CLI (`pnpm --filter @ie/stitcher metrics -- --job`) has nothing to point at until the orchestrator defines jobs (T25); `stitch()` returns the same numbers.
+**T16 outcome (2026-11-05):** Setup now shows the real tile grid over a preview of the image.
+- New IPC: `intake.preview` (downscaled JPEG data URL, never enlarges; the file is only read) and handlers for the existing `slicer.plan`. `JobGrid` gained an optional `wrap` flag so a job carries what it needs to reproduce the previewed plan: the plan is pure and deterministic, so the orchestrator recomputes it from the source size, grid and wrap. The renderer keeps the plan in the store beside the draft (`plan`), guarded against late responses.
+- The overlay is an SVG in the image's own pixel coordinates (viewBox), so every line equals the plan's numbers at any display size. Overlaps are hatched (not colour-only); wrap mode adds a dashed border and a sentence and folds wrap-around overlaps back to the border they continue from. Tile details are listed in text for screen readers; the grid mode radios are keyboard-operable.
+- Warnings (advisory, `aria-live="polite"`, never block Start): a core under 384 px on a side; tiles whose padded image is larger than the selected provider returns (`PROVIDER_OUTPUT_PX`, kept equal to the provider configs by a test).
+- Not done here: the preset buttons are fixed at 2 rows (3x2 / 4x2) rather than oriented by image shape as `presetGrid()` does for portrait images; worth deciding when real jobs run.
 ### Checkpoint C — After Tasks 14–22 (RISK GATE)
 
 - [ ] Slice → unchanged stitch is pixel-identical on all fixtures.

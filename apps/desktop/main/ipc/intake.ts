@@ -1,5 +1,6 @@
 import { parseIpcRequest, parseIpcResponse, type IpcResponse } from '@ie/contracts';
 import { createJob, importImage, IntakeError } from '@ie/intake';
+import sharp from 'sharp';
 
 import type { AssetRegistry } from '../assetRegistry.js';
 import { ipcError, type IpcResult } from './app.js';
@@ -60,6 +61,44 @@ export function handleIntakeCreateJob(
   }
 
   const response = parseIpcResponse('intake.createJob', job);
+  if (!response.ok) return ipcError('invalid_response', response.error);
+  return { ok: true, value: response.value };
+}
+
+const DEFAULT_PREVIEW_SIDE = 1024;
+
+export type PreviewRenderer = (path: string, maxSide: number) => Promise<IpcResponse<'intake.preview'>>;
+
+/** A JPEG no larger than `maxSide` on its longer side, never enlarged. The image file is only read. */
+export const renderPreview: PreviewRenderer = async (path, maxSide) => {
+  const { data, info } = await sharp(path)
+    .resize({ width: maxSide, height: maxSide, fit: 'inside', withoutEnlargement: true })
+    .jpeg({ quality: 82 })
+    .toBuffer({ resolveWithObject: true });
+  return { dataUrl: `data:image/jpeg;base64,${data.toString('base64')}`, width: info.width, height: info.height };
+};
+
+/** `intake.preview` handler: a small picture of an imported image, to draw the tile grid over. */
+export async function handleIntakePreview(
+  payload: unknown,
+  registry: AssetRegistry,
+  render: PreviewRenderer = renderPreview,
+): Promise<IpcResult<IpcResponse<'intake.preview'>>> {
+  const request = parseIpcRequest('intake.preview', payload);
+  if (!request.ok) return ipcError('invalid_request', request.error);
+
+  const asset = registry.get(request.value.assetId);
+  if (!asset) return ipcError('invalid_request', 'That image is no longer available. Import it again.');
+
+  let preview;
+  try {
+    preview = await render(asset.path, request.value.maxSide ?? DEFAULT_PREVIEW_SIDE);
+  } catch (error) {
+    const missing = error instanceof Error && /ENOENT|no such file|Input file is missing/i.test(error.message);
+    return missing ? ipcError('file-not-found', 'The image file is no longer there.') : ipcError('internal', 'The preview could not be made.');
+  }
+
+  const response = parseIpcResponse('intake.preview', preview);
   if (!response.ok) return ipcError('invalid_response', response.error);
   return { ok: true, value: response.value };
 }

@@ -3,10 +3,11 @@ import { useEffect } from 'react';
 import { AutoDetectCard } from '../components/AutoDetectCard';
 import { CategoryPicker } from '../components/CategoryPicker';
 import { GridControls } from '../components/GridControls';
+import { GridOverlay } from '../components/GridOverlay';
 import { PromptBox } from '../components/PromptBox';
 import { ProviderPicker } from '../components/ProviderPicker';
 import { useJobDraft } from '../hooks/useJobDraft';
-import { useShellStore } from '../store';
+import { useShellStore, wrapFor } from '../store';
 
 const baseName = (path: string): string => path.split(/[\\/]/).pop() ?? path;
 
@@ -17,12 +18,25 @@ export function Setup() {
   const providers = useShellStore((s) => s.providers);
   const starting = useShellStore((s) => s.starting);
   const startError = useShellStore((s) => s.startError);
+  const plan = useShellStore((s) => s.plan);
+  const preview = useShellStore((s) => s.preview);
+  const previewError = useShellStore((s) => s.previewError);
   const store = useShellStore.getState;
   const { draft, detection, promptError, gridErrors, blockReason, showReset } = useJobDraft();
+  const assetId = asset?.id ?? null;
+  const wrap = wrapFor(categories, draft.categoryId);
 
   useEffect(() => {
     if (categories.length === 0) void store().loadCategories();
   }, [categories.length, store]);
+
+  // The preview picture is loaded once per image; the plan follows every change of the grid or of wrap.
+  useEffect(() => {
+    if (assetId) void store().loadPreview();
+  }, [assetId, store]);
+  useEffect(() => {
+    void store().refreshPlan();
+  }, [assetId, draft.rows, draft.cols, draft.overlapPct, wrap, store]);
 
   // Auto stays selected across a new image or a reload: analyse again whenever there is no result yet.
   const needsDetection = draft.autoSelected && detection.status === 'idle' && asset !== null && categories.length > 0;
@@ -82,6 +96,13 @@ export function Setup() {
         onMode={(mode) => store().setGridMode(mode)}
         onField={(field, value) => store().setGridField(field, value)}
       />
+      {plan.status === 'ok' && <GridOverlay plan={plan.plan} previewUrl={preview?.dataUrl ?? null} providerId={draft.providerId} />}
+      {plan.status === 'error' && (
+        <p role="alert" className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800">
+          {plan.message}
+        </p>
+      )}
+      {previewError && <p className="text-sm text-slate-700">{previewError} The grid is still drawn to scale.</p>}
       <ProviderPicker
         selected={draft.providerId}
         statuses={providers}

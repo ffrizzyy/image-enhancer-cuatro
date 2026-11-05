@@ -19,10 +19,11 @@ import { app, BrowserWindow, ipcMain, session, type WebContents } from 'electron
 import sharp from 'sharp';
 
 import { handleAppPing, ipcError } from './ipc/app.js';
-import { handleIntakeCreateJob, handleIntakeImport } from './ipc/intake.js';
+import { handleIntakeCreateJob, handleIntakeImport, handleIntakePreview } from './ipc/intake.js';
 import { handlePresetsList, handlePresetsSuggest } from './ipc/presets.js';
 import { handleSessionsClear, handleSessionsOpen, handleSessionsStatus } from './ipc/sessions.js';
 import { handleSettingsGet, handleSettingsSet } from './ipc/settings.js';
+import { handleSlicerPlan } from './ipc/slicer.js';
 import { createAssetRegistry } from './assetRegistry.js';
 import { parseToolArgs, runProviderTool } from './providerTools.js';
 import { createSettingsStore } from './settingsStore.js';
@@ -78,6 +79,8 @@ function registerIpc(): void {
   const assets = createAssetRegistry();
   ipcMain.handle('intake.import', (_event, payload: unknown) => handleIntakeImport(payload, undefined, assets));
   ipcMain.handle('intake.createJob', (_event, payload: unknown) => handleIntakeCreateJob(payload, assets));
+  ipcMain.handle('intake.preview', (_event, payload: unknown) => handleIntakePreview(payload, assets));
+  ipcMain.handle('slicer.plan', (_event, payload: unknown) => handleSlicerPlan(payload, assets));
   ipcMain.handle('presets.list', () => handlePresetsList());
   const featuresDir = path.join(app.getPath('userData'), 'features');
   ipcMain.handle('presets.suggestCategory', (_event, payload: unknown) =>

@@ -181,6 +181,7 @@ export const JobGridSchema = z.object({
   rows: gridAxis,
   cols: gridAxis,
   overlapPct,
+  wrap: z.boolean().optional(),
 });
 
 export const JobSchema = z.object({
@@ -194,6 +195,12 @@ export const JobSchema = z.object({
   categoryConfidence: z.number().min(0).max(1).optional(),
   grid: JobGridSchema,
   providerId: ProviderIdSchema,
+});
+
+export const ImagePreviewSchema = z.object({
+  dataUrl: z.string().regex(/^data:image\/(jpeg|png);base64,/).max(8_000_000),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
 });
 
 export const CreateJobRequestSchema = z.object({
@@ -430,6 +437,10 @@ export const ipcSchemas = {
   'intake.createJob': {
     request: CreateJobRequestSchema,
     response: JobSchema,
+  },
+  'intake.preview': {
+    request: z.object({ assetId: id, maxSide: z.number().int().min(64).max(2048).optional() }),
+    response: ImagePreviewSchema,
   },
   'slicer.plan': {
     request: z.object({

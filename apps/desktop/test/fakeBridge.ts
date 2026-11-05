@@ -1,5 +1,6 @@
 import { CURRENT_RISK_NOTICE_VERSION, IPC_VERSION, type AppSettings, type SessionStatus } from '@ie/contracts';
 import { listCategories } from '@ie/presets';
+import { planTiles } from '@ie/slicer';
 import { vi } from 'vitest';
 
 import type { IeApi } from '../preload/index';
@@ -23,6 +24,8 @@ export function installBridge(overrides: { settings?: AppSettings } = {}) {
     ping: vi.fn(),
     importImage: vi.fn(),
     createJob: vi.fn(),
+    plan: vi.fn(),
+    preview: vi.fn(),
     listPresets: vi.fn(),
     suggest: vi.fn(),
     pathFor: vi.fn(),
@@ -57,6 +60,16 @@ export function installBridge(overrides: { settings?: AppSettings } = {}) {
       lowConfidence: false,
     },
   });
+  // The real slicer, for the asset the test has put in the store.
+  bridge.plan.mockImplementation(async (request: { grid: { rows: number; cols: number }; overlapPct: number; wrap?: boolean }) => {
+    const asset = useShellStore.getState().asset;
+    if (!asset) return { ok: false, error: { code: 'invalid_request', message: 'That image is no longer available. Import it again.' } };
+    return {
+      ok: true,
+      value: planTiles({ width: asset.width, height: asset.height, rows: request.grid.rows, cols: request.grid.cols, overlapPct: request.overlapPct, wrap: request.wrap ?? false }),
+    };
+  });
+  bridge.preview.mockImplementation(async () => ({ ok: true, value: { dataUrl: 'data:image/jpeg;base64,AAAA', width: 400, height: 300 } }));
   bridge.status.mockResolvedValue({ ok: true, value: 'unknown' });
   bridge.clear.mockResolvedValue({ ok: true, value: { cleared: true } });
   bridge.getSettings.mockResolvedValue({ ok: true, value: overrides.settings ?? acknowledgedSettings });
@@ -67,7 +80,8 @@ export function installBridge(overrides: { settings?: AppSettings } = {}) {
 
   window.ie = {
     app: { ping: bridge.ping },
-    intake: { import: bridge.importImage, createJob: bridge.createJob },
+    intake: { import: bridge.importImage, createJob: bridge.createJob, preview: bridge.preview },
+    slicer: { plan: bridge.plan },
     presets: { list: bridge.listPresets, suggestCategory: bridge.suggest },
     files: { pathFor: bridge.pathFor },
     sessions: {
@@ -97,6 +111,9 @@ export function installBridge(overrides: { settings?: AppSettings } = {}) {
     categoriesError: null,
     draft: emptyDraft(),
     detection: { status: 'idle' },
+    plan: { status: 'idle' },
+    preview: null,
+    previewError: null,
     job: null,
     starting: false,
     startError: null,
