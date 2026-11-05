@@ -373,6 +373,7 @@ export const TileProgressSchema = z.object({
   state: TileStateSchema,
   outputPath: path.optional(),
   errorKind: ProviderErrorKindSchema.optional(),
+  note: z.string().max(4000).optional(),
   attempts: z.number().int().min(0),
 });
 
@@ -381,6 +382,9 @@ export const JobProgressSchema = z.object({
   state: JobStateSchema,
   pauseReason: PauseReasonSchema.optional(),
   resumeAfter: isoDate.optional(),
+  error: z.string().max(4000).optional(),
+  providerId: ProviderIdSchema.optional(),
+  grid: GridSchema.optional(),
   completedTiles: z.number().int().min(0),
   totalTiles: z.number().int().min(0),
   tiles: z.array(TileProgressSchema),
@@ -450,6 +454,10 @@ export const ipcSchemas = {
       wrap: z.boolean().optional(),
     }),
     response: TilePlanSchema,
+  },
+  'jobs.tileThumbnail': {
+    request: z.object({ jobId: id, index: z.number().int().min(0), maxSide: z.number().int().min(32).max(1024).optional() }),
+    response: ImagePreviewSchema,
   },
   'jobs.start': {
     request: z.object({ jobId: id }),

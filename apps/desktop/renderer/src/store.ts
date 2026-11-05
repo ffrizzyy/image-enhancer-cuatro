@@ -6,6 +6,7 @@ import {
   type ImageAsset,
   type ImagePreview,
   type Job,
+  type JobProgress,
   type JobSummary,
   type ProviderId,
   type SessionStatus,
@@ -92,10 +93,18 @@ interface ShellState {
   plan: PlanState;
   preview: PreviewState | null;
   previewError: string | null;
-  /** Created by Start; execution arrives in Phase 3. */
+  /** Created by Start. */
   job: Job | null;
   starting: boolean;
   startError: string | null;
+  /** The job the Run screen shows: the one just started, or one opened from the recent list. */
+  activeJobId: string | null;
+  /** Live progress of every job this session has heard about, kept up to date by pushed events. */
+  progress: Record<string, JobProgress>;
+  /** The latest activity messages of each job, newest last. */
+  jobLog: Record<string, string[]>;
+  /** A problem with a run action (start, pause, resume, cancel), in plain words. */
+  runError: string | null;
   navigate: (route: RouteId) => void;
   loadPing: () => Promise<void>;
   importFile: (file: File) => Promise<void>;
@@ -124,7 +133,19 @@ interface ShellState {
   /** Loads the preview picture once per image. */
   loadPreview: () => Promise<void>;
   startJob: () => Promise<void>;
+  /** Starts listening for live job progress and activity; returns the unsubscribe function. */
+  subscribeJobs: () => () => void;
+  loadRecentJobs: () => Promise<void>;
+  /** Shows a job on the Run screen (loading its current state first). */
+  openJob: (jobId: string) => Promise<void>;
+  pauseJob: (jobId: string) => Promise<void>;
+  /** Continues a paused job (or one restored after a restart) and shows it. */
+  resumeJob: (jobId: string) => Promise<void>;
+  cancelJob: (jobId: string) => Promise<void>;
 }
+
+/** How many activity lines are kept per job. */
+const LOG_LIMIT = 100;
 
 /** Whether the selected category asks for a seamless result (texture jobs). */
 export const wrapFor = (categories: Category[], categoryId: string | null): boolean =>
@@ -154,6 +175,10 @@ export const useShellStore = create<ShellState>((set, get) => ({
   job: null,
   starting: false,
   startError: null,
+  activeJobId: null,
+  progress: {},
+  jobLog: {},
+  runError: null,
   navigate: (route) => set({ route }),
   loadPing: async () => {
     set({ ping: { status: 'loading' } });
@@ -354,13 +379,74 @@ export const useShellStore = create<ShellState>((set, get) => ({
     set({ starting: true, startError: null });
     try {
       const result = await ipc.intake.createJob(toCreateJobRequest(draft, asset.id, auto, wrapFor(get().categories, draft.categoryId)));
-      if (result.ok) {
-        set({ starting: false, job: result.value, route: 'run' });
-      } else {
+      if (!result.ok) {
         set({ starting: false, startError: result.error.message });
+        return;
       }
+      // The job is saved; show it, then start its pre-run checks and run in the background.
+      set({ starting: false, job: result.value, activeJobId: result.value.id, runError: null, route: 'run' });
+      const started = await ipc.jobs.start(result.value.id);
+      if (!started.ok) set({ runError: started.error.message });
     } catch (error) {
       set({ starting: false, startError: `Could not start the job: ${String(error)}` });
+    }
+  },
+  subscribeJobs: () => {
+    const offProgress = ipc.jobs.onProgress((progress) => set((state) => ({ progress: { ...state.progress, [progress.jobId]: progress } })));
+    const offLog = ipc.jobs.onLog(({ jobId, message }) =>
+      set((state) => ({ jobLog: { ...state.jobLog, [jobId]: [...(state.jobLog[jobId] ?? []), message].slice(-LOG_LIMIT) } })),
+    );
+    return () => {
+      offProgress();
+      offLog();
+    };
+  },
+  loadRecentJobs: async () => {
+    try {
+      const result = await ipc.jobs.listRecent(10);
+      if (result.ok) set({ recentJobs: result.value });
+    } catch {
+      /* the list is a convenience; keep what is shown */
+    }
+  },
+  openJob: async (jobId) => {
+    set({ activeJobId: jobId, runError: null, route: 'run' });
+    try {
+      const result = await ipc.jobs.get(jobId);
+      if (result.ok) set((state) => ({ progress: { ...state.progress, [jobId]: result.value } }));
+      else set({ runError: result.error.message });
+    } catch (error) {
+      set({ runError: `Could not load the job: ${String(error)}` });
+    }
+  },
+  pauseJob: async (jobId) => {
+    set({ runError: null });
+    try {
+      const result = await ipc.jobs.pause(jobId);
+      if (result.ok) set((state) => ({ progress: { ...state.progress, [jobId]: result.value } }));
+      else set({ runError: result.error.message });
+    } catch (error) {
+      set({ runError: `Could not pause the job: ${String(error)}` });
+    }
+  },
+  resumeJob: async (jobId) => {
+    set({ activeJobId: jobId, runError: null, route: 'run' });
+    try {
+      const result = await ipc.jobs.resume(jobId);
+      if (result.ok) set((state) => ({ progress: { ...state.progress, [jobId]: result.value } }));
+      else set({ runError: result.error.message });
+    } catch (error) {
+      set({ runError: `Could not resume the job: ${String(error)}` });
+    }
+  },
+  cancelJob: async (jobId) => {
+    set({ runError: null });
+    try {
+      const result = await ipc.jobs.cancel(jobId);
+      if (result.ok) set((state) => ({ progress: { ...state.progress, [jobId]: result.value } }));
+      else set({ runError: result.error.message });
+    } catch (error) {
+      set({ runError: `Could not cancel the job: ${String(error)}` });
     }
   },
 }));

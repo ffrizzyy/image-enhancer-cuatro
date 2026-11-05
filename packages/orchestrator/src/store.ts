@@ -96,10 +96,23 @@ export interface AttemptResult {
   elapsedMs?: number | null;
 }
 
+/** What one committed unit of work changed. */
+export interface StoreChange {
+  /** The jobs whose rows (job, tiles, attempts or events) changed. */
+  jobIds: string[];
+  /** The events logged in it, oldest first. */
+  events: EventRecord[];
+}
+
 export interface StoreOptions {
   /** How long a writer waits for another connection's write to finish before failing. */
   busyTimeoutMs?: number;
   now?: () => Date;
+  /**
+   * Called after each unit of work is committed (never before, never for one that was rolled back), so the app can push
+   * progress as it happens instead of polling. A listener that throws does not disturb the store.
+   */
+  onCommit?: (change: StoreChange) => void;
 }
 
 export const DEFAULT_BUSY_TIMEOUT_MS = 5000;
@@ -253,20 +266,39 @@ export function openStore(path: string, options: StoreOptions = {}): Store {
   const run = (sql: string, ...params: SQLInputValue[]) => db.prepare(sql).run(...params);
 
   let depth = 0;
+  const touched = new Set<string>();
+  let logged: EventRecord[] = [];
+  const touch = (jobId: string): void => void touched.add(jobId);
+
   function transaction<T>(fn: () => T): T {
     if (depth > 0) return fn();
     db.exec('BEGIN IMMEDIATE');
     depth = 1;
+    let result: T;
     try {
-      const result = fn();
+      result = fn();
       db.exec('COMMIT');
-      return result;
     } catch (error) {
       db.exec('ROLLBACK');
+      touched.clear();
+      logged = [];
       throw error;
     } finally {
       depth = 0;
     }
+
+    // Only now that it is committed does anyone hear about it.
+    if (touched.size > 0 || logged.length > 0) {
+      const change: StoreChange = { jobIds: [...touched], events: logged };
+      touched.clear();
+      logged = [];
+      try {
+        options.onCommit?.(change);
+      } catch {
+        /* a broken listener must not undo or fail committed work */
+      }
+    }
+    return result;
   }
 
   const requireJob = (id: string): JobRecord => {
@@ -287,7 +319,10 @@ export function openStore(path: string, options: StoreOptions = {}): Store {
 
   function addEvent(jobId: string, level: EventLevel, message: string, data?: unknown): EventRecord {
     const result = run('INSERT INTO events (job_id, at, level, message, data_json) VALUES (?, ?, ?, ?, ?)', jobId, stamp(), level, message, data === undefined ? null : JSON.stringify(data));
-    return toEventRecord(get('SELECT * FROM events WHERE id = ?', Number(result.lastInsertRowid))!);
+    const event = toEventRecord(get('SELECT * FROM events WHERE id = ?', Number(result.lastInsertRowid))!);
+    touch(jobId);
+    logged.push(event);
+    return event;
   }
 
   return {
@@ -352,6 +387,7 @@ export function openStore(path: string, options: StoreOptions = {}): Store {
           note: patch.note === undefined ? before.note : patch.note,
         };
         run('UPDATE tiles SET state = ?, attempt_base = ?, output_path = ?, prompt_override = ?, note = ?, updated_at = ? WHERE job_id = ? AND idx = ?', next.state, next.attemptBase, next.outputPath, next.promptOverride, next.note, stamp(), jobId, index);
+        touch(jobId);
         if (next.state !== before.state) addEvent(jobId, 'info', `Tile ${index + 1}: ${before.state} → ${next.state}`);
         return requireTile(jobId, index);
       });
@@ -363,6 +399,7 @@ export function openStore(path: string, options: StoreOptions = {}): Store {
         const n = tile.attempts + 1;
         const result = run('INSERT INTO attempts (job_id, tile_idx, n, started_at) VALUES (?, ?, ?, ?)', jobId, index, n, stamp());
         run("UPDATE tiles SET attempts = ?, state = 'running', updated_at = ? WHERE job_id = ? AND idx = ?", n, stamp(), jobId, index);
+        touch(jobId);
         if (tile.state !== 'running') addEvent(jobId, 'info', `Tile ${index + 1}: ${tile.state} → running (attempt ${n})`);
         return requireAttempt(Number(result.lastInsertRowid));
       });
@@ -370,7 +407,7 @@ export function openStore(path: string, options: StoreOptions = {}): Store {
 
     finishAttempt(attemptId, result) {
       return transaction(() => {
-        requireAttempt(attemptId);
+        touch(requireAttempt(attemptId).jobId);
         run('UPDATE attempts SET finished_at = ?, outcome = ?, error_kind = ?, message = ?, output_path = ?, elapsed_ms = ? WHERE id = ?', stamp(), result.outcome, result.errorKind ?? null, result.message ?? null, result.outputPath ?? null, result.elapsedMs ?? null, attemptId);
         return requireAttempt(attemptId);
       });

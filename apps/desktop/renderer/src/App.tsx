@@ -12,14 +12,21 @@ export function App() {
   const loadSettings = useShellStore((s) => s.loadSettings);
   const acknowledgeRisk = useShellStore((s) => s.acknowledgeRisk);
   const subscribeStatus = useShellStore((s) => s.subscribeStatus);
+  const subscribeJobs = useShellStore((s) => s.subscribeJobs);
   const current = ROUTES.find((r) => r.id === route) ?? ROUTES[0];
   const heading = useRef<HTMLHeadingElement>(null);
   const first = useRef(true);
 
   useEffect(() => {
     void loadSettings();
-    return subscribeStatus();
-  }, [loadSettings, subscribeStatus]);
+    // Both live feeds belong to the whole app, not to a screen, so leaving the Run screen loses nothing.
+    const offStatus = subscribeStatus();
+    const offJobs = subscribeJobs();
+    return () => {
+      offStatus();
+      offJobs();
+    };
+  }, [loadSettings, subscribeStatus, subscribeJobs]);
 
   // Move focus to the screen heading on navigation so keyboard/screen-reader users land on new content.
   useEffect(() => {

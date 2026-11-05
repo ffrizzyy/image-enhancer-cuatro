@@ -11,10 +11,14 @@ export function Home() {
   const importing = useShellStore((s) => s.importing);
   const importError = useShellStore((s) => s.importError);
   const recentJobs = useShellStore((s) => s.recentJobs);
+  const loadRecentJobs = useShellStore((s) => s.loadRecentJobs);
+  const openJob = useShellStore((s) => s.openJob);
+  const resumeJob = useShellStore((s) => s.resumeJob);
 
   useEffect(() => {
     void loadPing();
-  }, [loadPing]);
+    void loadRecentJobs();
+  }, [loadPing, loadRecentJobs]);
 
   return (
     <>
@@ -29,7 +33,7 @@ export function Home() {
           {importError.message}
         </p>
       )}
-      <RecentJobs jobs={recentJobs} />
+      <RecentJobs jobs={recentJobs} onOpen={(id) => void openJob(id)} onResume={(id) => void resumeJob(id)} />
       <p role="status" className="mt-8 text-sm text-slate-600">
         {ping.status === 'ok' && `Main process ready: app ${ping.version}, IPC v${ping.ipcVersion}`}
         {ping.status === 'error' && `Main process error: ${ping.message}`}

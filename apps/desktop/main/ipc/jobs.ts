@@ -1,0 +1,80 @@
+import { parseIpcRequest, parseIpcResponse, type IpcRequest, type IpcResponse } from '@ie/contracts';
+
+import type { AssetRegistry } from '../assetRegistry.js';
+import { JobServiceError, type JobService } from '../jobService.js';
+import { handleIntakeCreateJob } from './intake.js';
+import { ipcError, type IpcResult } from './app.js';
+
+function toIpcError(error: unknown): IpcResult<never> {
+  if (error instanceof JobServiceError) return ipcError('invalid_request', error.message);
+  return ipcError('internal', error instanceof Error ? error.message : 'unknown error');
+}
+
+type JobChannel = 'jobs.pause' | 'jobs.resume' | 'jobs.cancel' | 'jobs.get';
+
+/** Validates a `{ jobId }` request, runs the action, and validates the progress it returns. */
+async function jobAction(channel: JobChannel, payload: unknown, run: (jobId: string) => Promise<IpcResponse<JobChannel>> | IpcResponse<JobChannel>): Promise<IpcResult<IpcResponse<JobChannel>>> {
+  const request = parseIpcRequest(channel, payload);
+  if (!request.ok) return ipcError('invalid_request', request.error);
+  try {
+    const result = await run((request.value as IpcRequest<'jobs.get'>).jobId);
+    const response = parseIpcResponse(channel, result);
+    return response.ok ? { ok: true, value: response.value } : ipcError('invalid_response', response.error);
+  } catch (error) {
+    return toIpcError(error);
+  }
+}
+
+/** `jobs.start` replies with just the job id and where it is; everything else arrives as `jobs.progress` events. */
+export async function handleJobsStart(payload: unknown, service: JobService): Promise<IpcResult<IpcResponse<'jobs.start'>>> {
+  const request = parseIpcRequest('jobs.start', payload);
+  if (!request.ok) return ipcError('invalid_request', request.error);
+  try {
+    const progress = await service.start(request.value.jobId);
+    const response = parseIpcResponse('jobs.start', { jobId: progress.jobId, state: progress.state });
+    return response.ok ? { ok: true, value: response.value } : ipcError('invalid_response', response.error);
+  } catch (error) {
+    return toIpcError(error);
+  }
+}
+export const handleJobsPause = (payload: unknown, service: JobService) => jobAction('jobs.pause', payload, (id) => service.pause(id)) as Promise<IpcResult<IpcResponse<'jobs.get'>>>;
+export const handleJobsResume = (payload: unknown, service: JobService) => jobAction('jobs.resume', payload, (id) => service.resume(id)) as Promise<IpcResult<IpcResponse<'jobs.get'>>>;
+export const handleJobsCancel = (payload: unknown, service: JobService) => jobAction('jobs.cancel', payload, (id) => service.cancel(id)) as Promise<IpcResult<IpcResponse<'jobs.get'>>>;
+export const handleJobsGet = (payload: unknown, service: JobService) => jobAction('jobs.get', payload, (id) => service.get(id)) as Promise<IpcResult<IpcResponse<'jobs.get'>>>;
+
+export function handleJobsListRecent(payload: unknown, service: JobService): IpcResult<IpcResponse<'jobs.listRecent'>> {
+  const request = parseIpcRequest('jobs.listRecent', payload ?? {});
+  if (!request.ok) return ipcError('invalid_request', request.error);
+  try {
+    const response = parseIpcResponse('jobs.listRecent', service.listRecent(request.value.limit));
+    return response.ok ? { ok: true, value: response.value } : ipcError('invalid_response', response.error);
+  } catch (error) {
+    return toIpcError(error);
+  }
+}
+
+export async function handleJobsTileThumbnail(payload: unknown, service: JobService): Promise<IpcResult<IpcResponse<'jobs.tileThumbnail'>>> {
+  const request = parseIpcRequest('jobs.tileThumbnail', payload);
+  if (!request.ok) return ipcError('invalid_request', request.error);
+  try {
+    const response = parseIpcResponse('jobs.tileThumbnail', await service.tileThumbnail(request.value.jobId, request.value.index, request.value.maxSide));
+    return response.ok ? { ok: true, value: response.value } : ipcError('invalid_response', response.error);
+  } catch (error) {
+    return toIpcError(error);
+  }
+}
+
+/**
+ * `intake.createJob`, and then the job is saved with its tile plan so Start can run it and a restart does not lose it.
+ * The job is only created in the job store here, when the user presses Start on Setup.
+ */
+export function handleCreateAndRegisterJob(payload: unknown, registry: AssetRegistry, service: JobService): IpcResult<IpcResponse<'intake.createJob'>> {
+  const created = handleIntakeCreateJob(payload, registry);
+  if (!created.ok) return created;
+  try {
+    service.register(created.value);
+  } catch (error) {
+    return ipcError('internal', `The job could not be saved: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  return created;
+}

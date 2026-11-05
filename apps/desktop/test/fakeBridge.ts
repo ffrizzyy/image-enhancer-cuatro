@@ -16,16 +16,27 @@ export const acknowledgedSettings: AppSettings = {
 };
 
 type StatusListener = Parameters<IeApi['sessions']['onStatus']>[0];
+type ProgressListener = Parameters<IeApi['jobs']['onProgress']>[0];
+type LogListener = Parameters<IeApi['jobs']['onLog']>[0];
 
 /** Installs a fake `window.ie` with sensible defaults; override any member per test. */
 export function installBridge(overrides: { settings?: AppSettings } = {}) {
   const listeners = new Set<StatusListener>();
+  const progressListeners = new Set<ProgressListener>();
+  const logListeners = new Set<LogListener>();
   const bridge = {
     ping: vi.fn(),
     importImage: vi.fn(),
     createJob: vi.fn(),
     plan: vi.fn(),
     preview: vi.fn(),
+    startJob: vi.fn(),
+    pauseJob: vi.fn(),
+    resumeJob: vi.fn(),
+    cancelJob: vi.fn(),
+    getJob: vi.fn(),
+    listRecent: vi.fn(),
+    tileThumbnail: vi.fn(),
     listPresets: vi.fn(),
     suggest: vi.fn(),
     pathFor: vi.fn(),
@@ -38,6 +49,10 @@ export function installBridge(overrides: { settings?: AppSettings } = {}) {
     emitStatus: (providerId: 'gpt' | 'gemini' | 'grok', status: SessionStatus) =>
       listeners.forEach((listener) => listener({ providerId, status })),
     listenerCount: () => listeners.size,
+    /** Pushes a live job progress event, like the main process does. */
+    emitProgress: (progress: Parameters<ProgressListener>[0]) => progressListeners.forEach((listener) => listener(progress)),
+    emitLog: (log: Parameters<LogListener>[0]) => logListeners.forEach((listener) => listener(log)),
+    progressListenerCount: () => progressListeners.size,
   };
 
   bridge.ping.mockResolvedValue({ ok: true, value: { version: '0.1.0', ipcVersion: IPC_VERSION } });
@@ -70,6 +85,9 @@ export function installBridge(overrides: { settings?: AppSettings } = {}) {
     };
   });
   bridge.preview.mockImplementation(async () => ({ ok: true, value: { dataUrl: 'data:image/jpeg;base64,AAAA', width: 400, height: 300 } }));
+  bridge.startJob.mockImplementation(async (jobId: string) => ({ ok: true, value: { jobId, state: 'preflight' } }));
+  bridge.listRecent.mockImplementation(async () => ({ ok: true, value: useShellStore.getState().recentJobs }));
+  bridge.tileThumbnail.mockResolvedValue({ ok: true, value: { dataUrl: 'data:image/jpeg;base64,BBBB', width: 160, height: 120 } });
   bridge.status.mockResolvedValue({ ok: true, value: 'unknown' });
   bridge.clear.mockResolvedValue({ ok: true, value: { cleared: true } });
   bridge.getSettings.mockResolvedValue({ ok: true, value: overrides.settings ?? acknowledgedSettings });
@@ -82,6 +100,23 @@ export function installBridge(overrides: { settings?: AppSettings } = {}) {
     app: { ping: bridge.ping },
     intake: { import: bridge.importImage, createJob: bridge.createJob, preview: bridge.preview },
     slicer: { plan: bridge.plan },
+    jobs: {
+      start: bridge.startJob,
+      pause: bridge.pauseJob,
+      resume: bridge.resumeJob,
+      cancel: bridge.cancelJob,
+      get: bridge.getJob,
+      listRecent: bridge.listRecent,
+      tileThumbnail: bridge.tileThumbnail,
+      onProgress: (listener) => {
+        progressListeners.add(listener);
+        return () => progressListeners.delete(listener);
+      },
+      onLog: (listener) => {
+        logListeners.add(listener);
+        return () => logListeners.delete(listener);
+      },
+    },
     presets: { list: bridge.listPresets, suggestCategory: bridge.suggest },
     files: { pathFor: bridge.pathFor },
     sessions: {
@@ -117,6 +152,10 @@ export function installBridge(overrides: { settings?: AppSettings } = {}) {
     job: null,
     starting: false,
     startError: null,
+    activeJobId: null,
+    progress: {},
+    jobLog: {},
+    runError: null,
   });
 
   return bridge;

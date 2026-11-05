@@ -1,10 +1,10 @@
 import { mkdtempSync } from 'node:fs';
-import { rm } from 'node:fs/promises';
+import { mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { CURRENT_RISK_NOTICE_VERSION } from '@ie/contracts';
+import { CURRENT_RISK_NOTICE_VERSION, type ProviderId } from '@ie/contracts';
 import {
   createHealthProbe,
   createSessionManager,
@@ -15,16 +15,31 @@ import {
 } from '@ie/sessions';
 import { createElectronBackend } from '@ie/sessions/electron';
 import { getFeatures } from '@ie/intake';
+import { openStore } from '@ie/orchestrator';
+import { createGeminiAdapter, createGptAdapter, createGrokAdapter, createImageSaver, type ProviderAdapter } from '@ie/providers';
+import { ElectronPageDriver } from '@ie/providers/electron';
 import { app, BrowserWindow, ipcMain, session, type WebContents } from 'electron';
 import sharp from 'sharp';
 
 import { handleAppPing, ipcError } from './ipc/app.js';
-import { handleIntakeCreateJob, handleIntakeImport, handleIntakePreview } from './ipc/intake.js';
+import { handleIntakeImport, handleIntakePreview } from './ipc/intake.js';
+import {
+  handleCreateAndRegisterJob,
+  handleJobsCancel,
+  handleJobsGet,
+  handleJobsListRecent,
+  handleJobsPause,
+  handleJobsResume,
+  handleJobsStart,
+  handleJobsTileThumbnail,
+} from './ipc/jobs.js';
 import { handlePresetsList, handlePresetsSuggest } from './ipc/presets.js';
 import { handleSessionsClear, handleSessionsOpen, handleSessionsStatus } from './ipc/sessions.js';
 import { handleSettingsGet, handleSettingsSet } from './ipc/settings.js';
 import { handleSlicerPlan } from './ipc/slicer.js';
 import { createAssetRegistry } from './assetRegistry.js';
+import { createDevFakeProvider, wantsDevFake } from './fakeProvider.js';
+import { createJobService, type AdapterLease } from './jobService.js';
 import { parseToolArgs, runProviderTool } from './providerTools.js';
 import { createSettingsStore } from './settingsStore.js';
 
@@ -77,8 +92,42 @@ function registerIpc(): void {
   });
 
   const assets = createAssetRegistry();
+
+  // Jobs: saved in a database in the data folder, run in the background, reported to the window as events.
+  const userData = app.getPath('userData');
+  const send = (channel: string, payload: unknown): void => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, payload);
+  };
+  const adapterFor = async (providerId: ProviderId): Promise<AdapterLease> => {
+    if (wantsDevFake(app.isPackaged)) return { adapter: createDevFakeProvider(userData) };
+    // Watch mode keeps the provider window on screen; otherwise it opens only when it needs the person.
+    const opened = await manager.open(providerId, { visible: settings.get().watchMode });
+    const driver = new ElectronPageDriver(opened.view.native);
+    const saveImage = createImageSaver(path.join(userData, 'provider-downloads', providerId), `${providerId}-result`);
+    const adapter: ProviderAdapter = providerId === 'gemini' ? createGeminiAdapter({ driver, saveImage }) : providerId === 'gpt' ? createGptAdapter({ driver, saveImage }) : createGrokAdapter({ driver, saveImage });
+    return { adapter, release: () => driver.dispose() };
+  };
+  const jobs = createJobService({
+    store: openStore(path.join(userData, 'jobs.sqlite'), { onCommit: (change) => jobs.notify(change) }),
+    dataDir: userData,
+    adapterFor,
+    sessionStatus: (providerId) => manager.status(providerId),
+    showProvider: async (providerId) => void (await manager.open(providerId, { visible: true })),
+    emitProgress: (progress) => send('jobs.progress', progress),
+    emitLog: (log) => send('jobs.log', log),
+  });
+  // Jobs that were running when the app last closed are put back in a state they can continue from.
+  jobs.restore();
+
   ipcMain.handle('intake.import', (_event, payload: unknown) => handleIntakeImport(payload, undefined, assets));
-  ipcMain.handle('intake.createJob', (_event, payload: unknown) => handleIntakeCreateJob(payload, assets));
+  ipcMain.handle('intake.createJob', (_event, payload: unknown) => handleCreateAndRegisterJob(payload, assets, jobs));
+  ipcMain.handle('jobs.start', (_event, payload: unknown) => handleJobsStart(payload, jobs));
+  ipcMain.handle('jobs.pause', (_event, payload: unknown) => handleJobsPause(payload, jobs));
+  ipcMain.handle('jobs.resume', (_event, payload: unknown) => handleJobsResume(payload, jobs));
+  ipcMain.handle('jobs.cancel', (_event, payload: unknown) => handleJobsCancel(payload, jobs));
+  ipcMain.handle('jobs.get', (_event, payload: unknown) => handleJobsGet(payload, jobs));
+  ipcMain.handle('jobs.listRecent', (_event, payload: unknown) => handleJobsListRecent(payload, jobs));
+  ipcMain.handle('jobs.tileThumbnail', (_event, payload: unknown) => handleJobsTileThumbnail(payload, jobs));
   ipcMain.handle('intake.preview', (_event, payload: unknown) => handleIntakePreview(payload, assets));
   ipcMain.handle('slicer.plan', (_event, payload: unknown) => handleSlicerPlan(payload, assets));
   ipcMain.handle('presets.list', () => handlePresetsList());
@@ -120,6 +169,54 @@ async function smokeImport(): Promise<boolean> {
     return suggested.ok;
   } finally {
     await rm(file, { force: true });
+  }
+}
+
+/**
+ * Runs a small job end to end with the fake provider inside the packaged runtime: the SQLite store, the orchestrator,
+ * the tile pipeline and the stitcher, exactly as a real run would use them. Proves they all work in this build.
+ */
+async function smokeJobs(): Promise<boolean> {
+  const dir = path.join(app.getPath('temp'), `ie-smoke-jobs-${process.pid}`);
+  try {
+    await mkdir(dir, { recursive: true });
+    const source = path.join(dir, 'source.png');
+    const data = Buffer.alloc(800 * 400 * 3);
+    for (let y = 0; y < 400; y++) for (let x = 0; x < 800; x++) data.set([128 + 90 * Math.sin(x / 31), 110 + 70 * Math.cos(y / 23), 120 + 60 * Math.sin((x + y) / 41)], (y * 800 + x) * 3);
+    await sharp(data, { raw: { width: 800, height: 400, channels: 3 } }).png().toFile(source);
+
+    let service!: ReturnType<typeof createJobService>;
+    const store = openStore(path.join(dir, 'jobs.sqlite'), { onCommit: (change) => service.notify(change) });
+    try {
+      service = createJobService({
+        store,
+        dataDir: dir,
+        adapterFor: async () => ({ adapter: createDevFakeProvider(dir, { IE_FAKE_DELAY_MS: '0' }) }),
+        sessionStatus: async () => 'ready',
+        emitProgress: () => {},
+        emitLog: () => {},
+        runOptions: { sleep: async () => {} },
+      });
+      service.register({
+        id: 'SMOKE',
+        createdAt: new Date().toISOString(),
+        source: { path: source, width: 800, height: 400, sha256: '0'.repeat(64) },
+        prompt: 'Enhance this tile.',
+        promptSource: 'user',
+        categoryId: 'env-realistic',
+        categorySource: 'user',
+        grid: { rows: 1, cols: 4, overlapPct: 15 },
+        providerId: 'gemini',
+      });
+      await service.start('SMOKE');
+      await service.whenIdle();
+      const finished = service.get('SMOKE');
+      return finished.state === 'done' && finished.completedTiles === 4;
+    } finally {
+      store.close();
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
   }
 }
 
@@ -176,10 +273,10 @@ function createWindow(): BrowserWindow {
     // stack (sharp) works end to end through the intake handler.
     win.webContents.once('did-finish-load', () => {
       setTimeout(() => {
-        void Promise.all([win.webContents.executeJavaScript('document.body.innerText'), smokeImport()])
-          .then(([text, importOk]: [string, boolean]) => {
-            const ok = text.includes('Main process ready') && importOk;
-            console.log(ok ? 'SMOKE_OK' : `SMOKE_FAIL: importOk=${importOk} text=${text}`);
+        void Promise.all([win.webContents.executeJavaScript('document.body.innerText'), smokeImport(), smokeJobs()])
+          .then(([text, importOk, jobsOk]: [string, boolean, boolean]) => {
+            const ok = text.includes('Main process ready') && importOk && jobsOk;
+            console.log(ok ? 'SMOKE_OK' : `SMOKE_FAIL: importOk=${importOk} jobsOk=${jobsOk} text=${text}`);
             app.exit(ok ? 0 : 1);
           })
           .catch((error: unknown) => {

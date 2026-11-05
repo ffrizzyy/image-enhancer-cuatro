@@ -8,6 +8,7 @@ export type {
   JobRecord,
   JobStateChange,
   Store,
+  StoreChange,
   StoreErrorCode,
   StoreOptions,
   TilePatch,
@@ -38,3 +39,4 @@ export { DEFAULT_STITCH_OPTIONS, runJob } from './runner.ts';
 export type { PauseNotice, RunJobOptions, RunJobResult, StitchFn } from './runner.ts';
 export { gridFor, runSimulation } from './sim.ts';
 export type { SimulationOptions, SimulationResult, SimulationTile } from './sim.ts';
+export { jobProgress, recentJobs } from './progress.ts';

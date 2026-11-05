@@ -102,6 +102,7 @@ describe('IPC channel map', () => {
         'intake.createJob',
         'intake.preview',
         'slicer.plan',
+        'jobs.tileThumbnail',
         'jobs.start',
         'jobs.pause',
         'jobs.resume',

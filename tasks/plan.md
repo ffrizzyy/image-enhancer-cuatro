@@ -941,6 +941,13 @@ typed IPC job events. Start against the fake event emitter, then connect the rea
 **Files likely touched:** `renderer/src/screens/Run.tsx`, `components/TileGrid.tsx`, `hooks/useJobEvents.ts`, `test/run.test.tsx`
 **Estimated scope:** M (4–5 files)
 
+**T27 outcome (2026-11-05):** the orchestrator is now wired into the app and the Run screen is live.
+- **Main process:** `jobService` (injectable, unit-tested) owns background runs against a job database in the data folder; `jobs.start/pause/resume/cancel/get/listRecent/tileThumbnail` handlers; `intake.createJob` now also saves the job with its tile plan; jobs in flight at the last close are restored on startup. Real provider adapters come from the session manager (the window stays visible only in Watch mode; a captcha or login brings it forward). One job per provider at a time. `IE_FAKE_PROVIDER=1` (unpackaged builds only; `IE_FAKE_FAIL_RATE`, `IE_FAKE_DELAY_MS`) runs the app against the fake provider so the Run screen can be watched without an account.
+- **Events, no polling:** the store gained an `onCommit` hook (after each committed unit of work, never for a rollback); the service coalesces it into one `jobs.progress` message per job per burst plus `jobs.log` lines. The renderer subscribes once at the App level, so progress that arrives while on another screen is there when you come back.
+- **Contract additions:** `JobProgress` gained `error`, `providerId` and `grid`; `TileProgress` gained `note`; new `jobs.tileThumbnail`.
+- **Run screen:** a tile grid in the plan's rows and columns, each tile with a thumbnail (fetched once per output file, again only when a retry changes it), a word, a symbol and a distinct border per state (not colour alone), the try number, and why a tile was set aside; overall `<progress>`; pause reason; failure reason; activity list.
+- **Home:** recent jobs load from the job store, can be opened, and a paused (or restored-running) job can be resumed in one click.
+- The smoke check now runs a real simulated job inside the built app (SQLite, orchestrator, tile pipeline and stitcher), so a packaging problem would show.
 ### Task 28: Run screen — controls, banners, and cost preview
 
 **Outcome:** the user can pause/resume/cancel, watch the provider, and resolve pauses in one click.

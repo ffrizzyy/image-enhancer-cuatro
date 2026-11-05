@@ -24,6 +24,17 @@ export const ipc = {
   slicer: {
     plan: (request: Parameters<IeApi['slicer']['plan']>[0]) => window.ie.slicer.plan(request),
   },
+  jobs: {
+    start: (jobId: string) => window.ie.jobs.start(jobId),
+    pause: (jobId: string) => window.ie.jobs.pause(jobId),
+    resume: (jobId: string) => window.ie.jobs.resume(jobId),
+    cancel: (jobId: string) => window.ie.jobs.cancel(jobId),
+    get: (jobId: string) => window.ie.jobs.get(jobId),
+    listRecent: (limit?: number) => window.ie.jobs.listRecent(limit),
+    tileThumbnail: (request: Parameters<IeApi['jobs']['tileThumbnail']>[0]) => window.ie.jobs.tileThumbnail(request),
+    onProgress: (listener: Parameters<IeApi['jobs']['onProgress']>[0]) => window.ie.jobs.onProgress(listener),
+    onLog: (listener: Parameters<IeApi['jobs']['onLog']>[0]) => window.ie.jobs.onLog(listener),
+  },
   presets: {
     list: () => window.ie.presets.list(),
     suggestCategory: (request: Parameters<IeApi['presets']['suggestCategory']>[0]) => window.ie.presets.suggestCategory(request),

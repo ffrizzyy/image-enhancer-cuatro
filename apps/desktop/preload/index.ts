@@ -21,6 +21,19 @@ export interface IeApi {
     /** The exact tile plan for the current grid; pure, never calls a provider. */
     plan(request: IpcRequest<'slicer.plan'>): Promise<IpcResult<IpcResponse<'slicer.plan'>>>;
   };
+  jobs: {
+    /** Starts the pre-run checks and the run in the background; progress arrives through `onProgress`. */
+    start(jobId: string): Promise<IpcResult<IpcResponse<'jobs.start'>>>;
+    pause(jobId: string): Promise<IpcResult<IpcResponse<'jobs.pause'>>>;
+    resume(jobId: string): Promise<IpcResult<IpcResponse<'jobs.resume'>>>;
+    cancel(jobId: string): Promise<IpcResult<IpcResponse<'jobs.cancel'>>>;
+    get(jobId: string): Promise<IpcResult<IpcResponse<'jobs.get'>>>;
+    listRecent(limit?: number): Promise<IpcResult<IpcResponse<'jobs.listRecent'>>>;
+    tileThumbnail(request: IpcRequest<'jobs.tileThumbnail'>): Promise<IpcResult<IpcResponse<'jobs.tileThumbnail'>>>;
+    /** Live job progress, pushed whenever a job or one of its tiles changes. Returns an unsubscribe function. */
+    onProgress(listener: (event: IpcEvents['jobs.progress']) => void): () => void;
+    onLog(listener: (event: IpcEvents['jobs.log']) => void): () => void;
+  };
   presets: {
     list(): Promise<IpcResult<IpcResponse<'presets.list'>>>;
     /** Local, offline category suggestion for an imported image; never calls a provider. */
@@ -59,6 +72,25 @@ const api: IeApi = {
   },
   slicer: {
     plan: (request) => invoke('slicer.plan', request),
+  },
+  jobs: {
+    start: (jobId) => invoke('jobs.start', { jobId }),
+    pause: (jobId) => invoke('jobs.pause', { jobId }),
+    resume: (jobId) => invoke('jobs.resume', { jobId }),
+    cancel: (jobId) => invoke('jobs.cancel', { jobId }),
+    get: (jobId) => invoke('jobs.get', { jobId }),
+    listRecent: (limit) => invoke('jobs.listRecent', limit === undefined ? {} : { limit }),
+    tileThumbnail: (request) => invoke('jobs.tileThumbnail', request),
+    onProgress: (listener) => {
+      const handler = (_event: unknown, payload: IpcEvents['jobs.progress']) => listener(payload);
+      ipcRenderer.on('jobs.progress', handler);
+      return () => ipcRenderer.removeListener('jobs.progress', handler);
+    },
+    onLog: (listener) => {
+      const handler = (_event: unknown, payload: IpcEvents['jobs.log']) => listener(payload);
+      ipcRenderer.on('jobs.log', handler);
+      return () => ipcRenderer.removeListener('jobs.log', handler);
+    },
   },
   presets: {
     list: () => invoke('presets.list'),

@@ -67,7 +67,7 @@ Parallel tracks: slicer (T14–T16), providers (T17–T19), stitcher (T20–T22)
 - [x] **T24** Orchestrator: job state machine and resume — deps: T23
 - [x] **T25** Orchestrator: full job runner and simulation CLI — deps: T24, T17, T14, T15, T10, T11
 - [x] **T26** Orchestrator: pauses, backoff, cancel, crash recovery — deps: T25, T8
-- [ ] **T27** Run screen: tile grid and live progress — deps: T4, T25
+- [x] **T27** Run screen: tile grid and live progress — deps: T4, T25
 - [ ] **T28** Run screen: controls, banners, cost preview — deps: T27, T26
 
 ### Checkpoint D — after T23–T28

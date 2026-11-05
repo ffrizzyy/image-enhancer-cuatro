@@ -98,8 +98,9 @@ export async function runJob(options: RunJobOptions): Promise<RunJobResult> {
   // 1. Bring the job to `running` (or straight to stitching).
   const state = initial.state;
   if (state === 'failed' || state === 'cancelled') return { state, message: `This job is ${state} and cannot be run again.` };
-  if (state === 'idle') {
-    applyJobEvent(store, jobId, { type: 'START' });
+  if (state === 'idle' || state === 'preflight') {
+    // A caller may already have started the job (so it shows as running its checks at once); the checks are run here.
+    if (state === 'idle') applyJobEvent(store, jobId, { type: 'START' });
     const check = await preflight({ adapter, providerId: initial.job.providerId, sessionStatus: await options.getSessionStatus(), plan: initial.plan, pacing });
     result = { ...result, preflight: check };
     if (!check.ok) {
@@ -111,8 +112,6 @@ export async function runJob(options: RunJobOptions): Promise<RunJobResult> {
     applyJobEvent(store, jobId, { type: 'RESUME' });
   } else if ((state === 'needs-review' || state === 'done') && store.listTiles(jobId).some(isRunnable)) {
     applyJobEvent(store, jobId, { type: 'RERUN_TILE' });
-  } else if (state === 'preflight') {
-    return { state, message: 'The job is still in its pre-run checks.' };
   }
 
   const files = await prepareJobFiles(store.getJob(jobId)!, options.workDir);

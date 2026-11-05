@@ -284,6 +284,8 @@ export interface TileProgress {
   state: TileState;
   outputPath?: string | undefined;
   errorKind?: ProviderErrorKind | undefined;
+  /** Why a tile was rejected or set aside, in plain words. */
+  note?: string | undefined;
   attempts: number;
 }
 
@@ -292,6 +294,11 @@ export interface JobProgress {
   state: JobState;
   pauseReason?: PauseReason | undefined;
   resumeAfter?: string | undefined;
+  /** Why the job failed, or why the pre-run checks blocked it. */
+  error?: string | undefined;
+  providerId?: ProviderId | undefined;
+  /** How the tiles are laid out, so the Run screen can draw them as a grid. */
+  grid?: Grid | undefined;
   completedTiles: number;
   totalTiles: number;
   tiles: TileProgress[];
@@ -325,6 +332,8 @@ export interface IpcContract {
     request: { assetId: string; grid: Grid; overlapPct: number; wrap?: boolean };
     response: TilePlan;
   };
+  /** A small picture of a tile's current output, for the Run screen. */
+  'jobs.tileThumbnail': { request: { jobId: string; index: number; maxSide?: number }; response: ImagePreview };
   'jobs.start': { request: { jobId: string }; response: { jobId: string; state: JobState } };
   'jobs.pause': { request: { jobId: string }; response: JobProgress };
   'jobs.resume': { request: { jobId: string }; response: JobProgress };
