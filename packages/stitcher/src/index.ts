@@ -2,3 +2,12 @@ export { alignTiles, DEFAULT_MAX_SHIFT_PX, estimateShift, needsReview, shiftImag
 export type { AlignedTile, AlignInput, AlignResult, ShiftEstimate } from './align';
 export { cropToCrop, normalizeTile } from './normalize';
 export type { NormalizedTile } from './normalize';
+export { blendPair, DEFAULT_CHUNK_ROWS, transpose } from './blend';
+export type { BlendOptions, BlendStats, Placed } from './blend';
+export { deltaE76, labToRgb8, rgbToLab, toLinear, toSrgb8 } from './color';
+export type { Lab } from './color';
+export { applyCorrection, findOverlaps, matchColors } from './colorMatch';
+export type { Correction, DeltaEReport, MatchResult, Overlap } from './colorMatch';
+export { composeTiles } from './compose';
+export type { ComposeInput, ComposeOptions, ComposeResult } from './compose';
+export { findSeam } from './seam';

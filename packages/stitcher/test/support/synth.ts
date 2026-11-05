@@ -3,6 +3,8 @@ import { writeFileSync } from 'node:fs';
 import type { Rgba } from '@ie/slicer';
 import sharp from 'sharp';
 
+import { labToRgb8, rgbToLab } from '../../src';
+
 function rng(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
@@ -104,4 +106,31 @@ export function meanAbsDiff(a: Rgba, b: Rgba, region: { x: number; y: number; wi
     }
   }
   return sum / (region.width * region.height * 3);
+}
+
+export interface LabCast {
+  dL?: number;
+  da?: number;
+  db?: number;
+  /** Multiplies L about mid-grey, i.e. a contrast change. */
+  gainL?: number;
+}
+
+/** Simulates a provider shifting a tile's colour: a cast applied in Lab. */
+export function castLab(image: Rgba, cast: LabCast): Rgba {
+  const data = Buffer.from(image.data);
+  for (let i = 0; i < data.length; i += 4) {
+    const [l, a, b] = rgbToLab(data[i]!, data[i + 1]!, data[i + 2]!);
+    const [r, g, bl] = labToRgb8(((l - 50) * (cast.gainL ?? 1) + 50) + (cast.dL ?? 0), a + (cast.da ?? 0), b + (cast.db ?? 0));
+    data[i] = r;
+    data[i + 1] = g;
+    data[i + 2] = bl;
+  }
+  return { data, width: image.width, height: image.height };
+}
+
+export function solid(width: number, height: number, rgb: readonly [number, number, number]): Rgba {
+  const data = Buffer.alloc(width * height * 4);
+  for (let i = 0; i < data.length; i += 4) data.set([rgb[0], rgb[1], rgb[2], 255], i);
+  return { data, width, height };
 }

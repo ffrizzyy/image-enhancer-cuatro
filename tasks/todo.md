@@ -53,7 +53,7 @@ Parallel tracks: slicer (T14–T16), providers (T17–T19), stitcher (T20–T22)
 - [ ] **T18** GPT: config, fixtures, health, contract tests — deps: T17
 - [ ] **T19** GPT: enhance path and live smoke — deps: T18, T8  **[RISK GATE]**
 - [x] **T20** Stitcher: normalize and align — deps: T15
-- [ ] **T21** Stitcher: color matching and blending — deps: T20
+- [x] **T21** Stitcher: color matching and blending — deps: T20
 - [ ] **T22** Stitcher: harmonization, metrics, performance gate — deps: T21
 
 ### Checkpoint C — after T14–T22 (RISK GATE)

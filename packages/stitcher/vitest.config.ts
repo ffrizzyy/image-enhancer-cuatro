@@ -4,6 +4,8 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['test/**/*.test.ts'],
+    // Image processing in plain JS is slow, and slower still with coverage instrumentation.
+    testTimeout: 120_000,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
