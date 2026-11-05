@@ -13,3 +13,4 @@ apps/desktop/release/
 
 
 .sim-build/
+.test-build/

@@ -18,8 +18,11 @@ export const QUOTA_RESUME_AFTER_MS = 60 * 60 * 1000;
 
 export type TileOutcome =
   | { kind: 'accepted'; score: number }
-  /** The tile did not pass; it will be retried, or was set aside for review (`needsReview`). */
-  | { kind: 'rejected'; needsReview: boolean; reason: string }
+  /**
+   * The tile did not pass; it will be retried, or was set aside for review (`needsReview`). `transient` marks a
+   * passing provider problem (a timeout, a failed download), after which the runner backs off before retrying.
+   */
+  | { kind: 'rejected'; needsReview: boolean; reason: string; transient: boolean }
   /** The job must stop for the user: the tile is queued again untouched. */
   | { kind: 'pause'; reason: PauseReason; resumeAfter?: string; message: string }
   /** The job cannot continue (the provider page changed). */
@@ -101,7 +104,7 @@ export async function runTile(deps: TileRunDeps, jobId: string, index: number): 
           store.finishAttempt(attempt.id, failed);
           return applyTileEvent(store, jobId, index, { type: 'REJECT', final }, { note: message });
         });
-        return { kind: 'rejected', needsReview: tileState.state === 'needs-review', reason: message };
+        return { kind: 'rejected', needsReview: tileState.state === 'needs-review', reason: message, transient: false };
       }
       default: {
         // timeout, download-failed: the try is used up and the tile is retried (or set aside after the last one).
@@ -109,7 +112,7 @@ export async function runTile(deps: TileRunDeps, jobId: string, index: number): 
           store.finishAttempt(attempt.id, failed);
           return applyTileEvent(store, jobId, index, { type: 'REJECT' }, { note: message });
         });
-        return { kind: 'rejected', needsReview: tileState.state === 'needs-review', reason: message };
+        return { kind: 'rejected', needsReview: tileState.state === 'needs-review', reason: message, transient: true };
       }
     }
   }
@@ -135,5 +138,5 @@ export async function runTile(deps: TileRunDeps, jobId: string, index: number): 
     // The rejected picture stays on the tile, so a reviewer can look at the best attempt.
     return applyTileEvent(store, jobId, index, { type: 'REJECT' }, { outputPath: kept, note: reason });
   });
-  return { kind: 'rejected', needsReview: rejected.state === 'needs-review', reason };
+  return { kind: 'rejected', needsReview: rejected.state === 'needs-review', reason, transient: false };
 }

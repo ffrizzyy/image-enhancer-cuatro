@@ -1,7 +1,8 @@
 import type { Pacing, ProviderId, SessionStatus, TilePlan } from '@ie/contracts';
 import type { ProviderAdapter } from '@ie/providers';
 
-export const DEFAULT_PACING: Pacing = { concurrency: 1, minDelayMs: 8000, maxDelayMs: 25_000 };
+import { DEFAULT_PACING } from './pacing.ts';
+
 
 /** A rough time for one provider generation, for the cost preview only. */
 export const TYPICAL_GENERATION_SECONDS = 60;

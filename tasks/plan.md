@@ -912,6 +912,12 @@ exponential backoff, user pause/resume/cancel, and a kill-mid-run integration te
 **Files likely touched:** `src/pacing.ts`, `src/pause.ts`, `src/jobMachine.ts`, `test/pause.integration.test.ts`, `test/pacing.test.ts`
 **Estimated scope:** M (5 files)
 
+**T26 outcome (2026-11-05):**
+- **Pauses:** `challenge`, `logged-out` and `quota` queue the tile again without using a try and pause the job; `runJob({ onPause })` is called after the pause is saved, so the app can bring the provider window forward (challenge, login) or show the limit. `quota` carries a resume-after (one hour); `resumeInfo()` turns any pause into plain words and says how long a usage limit may last. Six pauses in a row on one tile never push it to review. A paused run does nothing and sleeps nothing: no busy loop. `ui-changed` fails the job naming the selector (as the spec's behaviour section says, so backoff is applied to the retries that actually happen: `timeout` and `download-failed`).
+- **Pacing:** `pacing.ts` validates (concurrency 1 or 2, sane delays) before a run starts, picks a random 8-25 s pause between tiles (none after the last), and `backoffDelayMs` doubles from 15 s up to 5 min with up to 25% spread. Backoff replaces the normal pause after a timeout or failed download only.
+- **User controls:** `pauseJob` (running only; repeating it is harmless; the tile being generated finishes first), resume = call `runJob` again, `cancelJob` (final; works from idle, preflight, running, paused, needs-review and stitching; refused for done, failed or already cancelled; accepted tiles stay on disk). A cancelled job is not restored on the next start.
+- **Kill test:** a real child process runs a 6-tile job with a slow provider and is `SIGKILL`ed after two tiles are accepted; the restart restores it, the accepted tiles are not run again and keep their exact outputs and attempt counts, and every tile ends with exactly one successful attempt.
+- A provider call in flight cannot be aborted: cancel and pause take effect once it returns.
 ### Task 27: Run screen — tile grid and live progress
 
 **Outcome:** the user watches each tile move through its states in real time.

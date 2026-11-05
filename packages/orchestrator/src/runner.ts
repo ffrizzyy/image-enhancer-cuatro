@@ -1,13 +1,14 @@
 import path from 'node:path';
 
-import type { JobState, Pacing, SessionStatus, StitchInput, StitchOptions } from '@ie/contracts';
+import type { JobState, Pacing, PauseReason, ProviderId, SessionStatus, StitchInput, StitchOptions } from '@ie/contracts';
 import { getCategory } from '@ie/presets';
 import type { ProviderAdapter } from '@ie/providers';
 import { stitch, type StitchIo, type StitchReport } from '@ie/stitcher';
 
 import { prepareJobFiles } from './attachments.ts';
 import { isTerminal } from './jobMachine.ts';
-import { DEFAULT_PACING, preflight, type PreflightResult } from './preflight.ts';
+import { backoffDelayMs, DEFAULT_BACKOFF, DEFAULT_PACING, pacingDelayMs, validatePacing, type Backoff } from './pacing.ts';
+import { preflight, type PreflightResult } from './preflight.ts';
 import { isRunnable, settledOutcome } from './resume.ts';
 import type { Store, TileRecord } from './store.ts';
 import { runTile, type TileOutcome } from './tileRunner.ts';
@@ -26,6 +27,13 @@ export interface RunJobOptions {
   /** The session monitor's current status for the job's provider. */
   getSessionStatus: () => Promise<SessionStatus>;
   pacing?: Pacing;
+  /** Waits before retrying a tile after a passing provider problem (a timeout, a failed download). */
+  backoff?: Backoff;
+  /**
+   * Called once the job has been paused and the pause is saved: the place to bring the provider's window to the
+   * front for a captcha or a login, or to tell the user about a usage limit. The job is not running while it waits.
+   */
+  onPause?: (pause: PauseNotice) => void | Promise<void>;
   /** Waits between tiles. Defaults to a real timer; tests and the simulation pass a no-op. */
   sleep?: (ms: number) => Promise<void>;
   random?: () => number;
@@ -37,6 +45,15 @@ export interface RunJobOptions {
   timeoutMs?: number;
   /** Told about each tile outcome (for progress displays). */
   onTile?: (index: number, outcome: TileOutcome) => void;
+}
+
+export interface PauseNotice {
+  jobId: string;
+  providerId: ProviderId;
+  reason: PauseReason;
+  /** For a usage limit: when it may have reset. */
+  resumeAfter: string | null;
+  message: string;
 }
 
 export interface RunJobResult {
@@ -60,7 +77,8 @@ const realSleep = (ms: number): Promise<void> => new Promise((resolve) => setTim
  */
 export async function runJob(options: RunJobOptions): Promise<RunJobResult> {
   const { store, jobId, adapter } = options;
-  const pacing = options.pacing ?? DEFAULT_PACING;
+  const pacing = validatePacing(options.pacing ?? DEFAULT_PACING);
+  const backoff = options.backoff ?? DEFAULT_BACKOFF;
   const sleep = options.sleep ?? realSleep;
   const random = options.random ?? Math.random;
 
@@ -122,6 +140,8 @@ export async function runJob(options: RunJobOptions): Promise<RunJobResult> {
       const { outcome } = stop;
       if (outcome.kind === 'pause') {
         applyJobEvent(store, jobId, { type: 'PAUSE', reason: outcome.reason, ...(outcome.resumeAfter ? { resumeAfter: outcome.resumeAfter } : {}) });
+        // The pause is saved first; only then is the user told, so a crash in the callback loses nothing.
+        await options.onPause?.({ jobId, providerId: initial.job.providerId, reason: outcome.reason, resumeAfter: outcome.resumeAfter ?? null, message: outcome.message });
         return finish({ message: outcome.message });
       }
       if (outcome.kind === 'job-failed') {
@@ -130,9 +150,17 @@ export async function runJob(options: RunJobOptions): Promise<RunJobResult> {
       }
     }
 
-    // A random pause between tiles, but not after the last one.
-    if (settledOutcome(store.listTiles(jobId)) === 'in-progress') {
-      await sleep(pacing.minDelayMs + random() * (pacing.maxDelayMs - pacing.minDelayMs));
+    // Wait before the next call, unless nothing is left: a longer, growing wait after a passing provider problem,
+    // otherwise the usual random pause. (Neither is a busy loop: the job simply sleeps.)
+    const remaining = store.listTiles(jobId);
+    if (settledOutcome(remaining) === 'in-progress' && store.getJob(jobId)!.state === 'running') {
+      const transient = outcomes.filter(({ outcome }) => outcome.kind === 'rejected' && outcome.transient && !outcome.needsReview);
+      if (transient.length > 0) {
+        const worst = Math.max(...transient.map(({ tile }) => store.getTile(jobId, tile.index)!.attempts - store.getTile(jobId, tile.index)!.attemptBase));
+        await sleep(backoffDelayMs(worst, backoff, random));
+      } else {
+        await sleep(pacingDelayMs(pacing, random));
+      }
     }
   }
 
