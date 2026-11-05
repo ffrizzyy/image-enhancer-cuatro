@@ -17,6 +17,19 @@ import { createElectronBackend } from '@ie/sessions/electron';
 import { createHealthProbe, createSessionManager, providersConfig, type OpenSession } from '@ie/sessions';
 import sharp from 'sharp';
 
+/** Structure of every image and busy/stop control on the page: tags, classes, sizes, URL host and kind. No text. */
+const IMAGE_SURVEY = `(() => {
+  const cut = (v, n = 60) => String(v == null ? '' : v).slice(0, n);
+  const path = (el) => { const p = []; for (let e = el, i = 0; e && i < 5; e = e.parentElement, i++) p.unshift(e.tagName.toLowerCase() + [...e.classList].slice(0, 2).map((c) => '.' + cut(c, 30)).join('')); return p.join(' > '); };
+  const images = [...document.images].map((img) => {
+    let host = '', suffix = '', kind = 'other';
+    try { const u = new URL(img.currentSrc || img.src); host = u.host; kind = u.protocol.replace(':', ''); suffix = u.pathname.slice(-12) + (u.search ? '?' + cut(u.search, 12) : '') + u.hash.slice(0, 0); } catch {}
+    return { path: path(img), alt: cut(img.alt), natural: img.naturalWidth + 'x' + img.naturalHeight, shown: img.width + 'x' + img.height, host, kind, urlTail: suffix };
+  });
+  const busy = [...document.querySelectorAll('[aria-busy="true"], button[aria-label*="Stop" i], button[aria-label*="Cancel" i], [class*="loading" i], [class*="progress" i]')].slice(0, 20).map((el) => ({ path: path(el), label: cut(el.getAttribute('aria-label')) }));
+  return { page: location.origin + location.pathname, images, busy };
+})()`;
+
 export type ToolCommand = 'discover' | 'health' | 'enhance';
 
 export interface ToolArgs {
@@ -69,12 +82,25 @@ async function describePage(session: OpenSession): Promise<string> {
   return Promise.race([answer, timeout]);
 }
 
-async function waitUntilReady(manager: ReturnType<typeof createSessionManager>, session: OpenSession, provider: ProviderId, timeoutMs: number): Promise<boolean> {
+/**
+ * With `lenient` (discovery only), a page that has a composer and is not on a login or challenge status counts
+ * as ready: a provider whose readiness probe is not verified yet can still be surveyed.
+ */
+async function waitUntilReady(manager: ReturnType<typeof createSessionManager>, session: OpenSession, provider: ProviderId, timeoutMs: number, lenient = false): Promise<boolean> {
   const stop = Date.now() + timeoutMs;
   let last = '';
   let polls = 0;
+  let composerSeen = 0;
   while (Date.now() < stop) {
     const status = await manager.status(provider);
+    if (lenient && status === 'unknown') {
+      const page = await describePage(session);
+      composerSeen = /"composer":[1-9]/.test(page) && !/login|signin|sign-in|auth/i.test(page) ? composerSeen + 1 : 0;
+      if (composerSeen >= 3) {
+        log(`status unknown (readiness probe not verified for ${provider}), but the page shows a composer: surveying anyway`);
+        return true;
+      }
+    }
     if (status !== 'ready' && polls++ % 5 === 0) log(`page: ${await describePage(session)}`);
     if (status !== last) {
       log(`status: ${status}`);
@@ -123,7 +149,7 @@ export async function runProviderTool({ command, provider, type, open, attach }:
 
   log(`opening ${provider} (visible) and waiting for a ready session...`);
   const session = await manager.open(provider, { visible: true });
-  if (!(await waitUntilReady(manager, session, provider, 180_000))) {
+  if (!(await waitUntilReady(manager, session, provider, 180_000, command === 'discover'))) {
     log('The session did not become ready in time. Log in in the provider window and run the tool again.');
     return 2;
   }
@@ -190,6 +216,15 @@ export async function runProviderTool({ command, provider, type, open, attach }:
   } catch (error) {
     if (error instanceof ProviderError) log(`failed: ${error.kind}: ${error.message}${error.selector ? ` (selector key: ${error.selector})` : ''}`);
     else log(`failed: ${error instanceof Error ? error.message : String(error)}`);
+    const cause = error instanceof Error ? error.cause : undefined;
+    if (cause) log(`cause: ${cause instanceof Error ? cause.message : String(cause)}`);
+    if (command === 'enhance') {
+      // What the page shows right now, structure only (no page text): lets a failed run still teach us the selectors.
+      const state = await session.view.evaluate(IMAGE_SURVEY).catch((e: unknown) => `survey failed: ${String(e)}`);
+      const file = path.join(outDir, `${provider}-failure.json`);
+      writeFileSync(file, JSON.stringify(state, null, 2));
+      log(`wrote page survey ${file}`);
+    }
     return 1;
   }
 }
