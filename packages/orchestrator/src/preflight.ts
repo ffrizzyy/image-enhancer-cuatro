@@ -40,7 +40,11 @@ const SESSION_REASONS: Partial<Record<SessionStatus, string>> = {
 };
 
 export function costPreview(plan: TilePlan, providerId: ProviderId, pacing: Pacing = DEFAULT_PACING): CostPreview {
-  const tiles = plan.tiles.length;
+  return costForTiles(plan.tiles.length, providerId, pacing);
+}
+
+/** The same preview from a tile count, for showing it before a job exists. */
+export function costForTiles(tiles: number, providerId: ProviderId, pacing: Pacing = DEFAULT_PACING): CostPreview {
   const meanDelaySeconds = (pacing.minDelayMs + pacing.maxDelayMs) / 2 / 1000;
   const perTile = TYPICAL_GENERATION_SECONDS + meanDelaySeconds;
   return {

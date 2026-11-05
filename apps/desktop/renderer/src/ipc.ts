@@ -31,6 +31,7 @@ export const ipc = {
     cancel: (jobId: string) => window.ie.jobs.cancel(jobId),
     get: (jobId: string) => window.ie.jobs.get(jobId),
     listRecent: (limit?: number) => window.ie.jobs.listRecent(limit),
+    costPreview: (request: Parameters<IeApi['jobs']['costPreview']>[0]) => window.ie.jobs.costPreview(request),
     tileThumbnail: (request: Parameters<IeApi['jobs']['tileThumbnail']>[0]) => window.ie.jobs.tileThumbnail(request),
     onProgress: (listener: Parameters<IeApi['jobs']['onProgress']>[0]) => window.ie.jobs.onProgress(listener),
     onLog: (listener: Parameters<IeApi['jobs']['onLog']>[0]) => window.ie.jobs.onLog(listener),

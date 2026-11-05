@@ -53,6 +53,17 @@ export function handleJobsListRecent(payload: unknown, service: JobService): Ipc
   }
 }
 
+export function handleJobsCostPreview(payload: unknown, service: JobService): IpcResult<IpcResponse<'jobs.costPreview'>> {
+  const request = parseIpcRequest('jobs.costPreview', payload);
+  if (!request.ok) return ipcError('invalid_request', request.error);
+  try {
+    const response = parseIpcResponse('jobs.costPreview', service.costPreview(request.value.providerId, request.value.tileCount));
+    return response.ok ? { ok: true, value: response.value } : ipcError('invalid_response', response.error);
+  } catch (error) {
+    return toIpcError(error);
+  }
+}
+
 export async function handleJobsTileThumbnail(payload: unknown, service: JobService): Promise<IpcResult<IpcResponse<'jobs.tileThumbnail'>>> {
   const request = parseIpcRequest('jobs.tileThumbnail', payload);
   if (!request.ok) return ipcError('invalid_request', request.error);

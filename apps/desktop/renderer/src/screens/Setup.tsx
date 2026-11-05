@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 
 import { AutoDetectCard } from '../components/AutoDetectCard';
 import { CategoryPicker } from '../components/CategoryPicker';
+import { CostPreview } from '../components/CostPreview';
 import { GridControls } from '../components/GridControls';
 import { GridOverlay } from '../components/GridOverlay';
 import { PromptBox } from '../components/PromptBox';
@@ -19,6 +20,7 @@ export function Setup() {
   const starting = useShellStore((s) => s.starting);
   const startError = useShellStore((s) => s.startError);
   const plan = useShellStore((s) => s.plan);
+  const cost = useShellStore((s) => s.cost);
   const preview = useShellStore((s) => s.preview);
   const previewError = useShellStore((s) => s.previewError);
   const store = useShellStore.getState;
@@ -37,6 +39,10 @@ export function Setup() {
   useEffect(() => {
     void store().refreshPlan();
   }, [assetId, draft.rows, draft.cols, draft.overlapPct, wrap, store]);
+  // The cost follows the plan and the provider.
+  useEffect(() => {
+    void store().refreshCost();
+  }, [plan, draft.providerId, store]);
 
   // Auto stays selected across a new image or a reload: analyse again whenever there is no result yet.
   const needsDetection = draft.autoSelected && detection.status === 'idle' && asset !== null && categories.length > 0;
@@ -108,6 +114,8 @@ export function Setup() {
         statuses={providers}
         onSelect={(provider) => store().setProvider(provider)}
       />
+
+      <CostPreview cost={cost} providerId={draft.providerId} />
 
       <div>
         <button

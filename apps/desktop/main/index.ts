@@ -26,6 +26,7 @@ import { handleIntakeImport, handleIntakePreview } from './ipc/intake.js';
 import {
   handleCreateAndRegisterJob,
   handleJobsCancel,
+  handleJobsCostPreview,
   handleJobsGet,
   handleJobsListRecent,
   handleJobsPause,
@@ -127,6 +128,7 @@ function registerIpc(): void {
   ipcMain.handle('jobs.cancel', (_event, payload: unknown) => handleJobsCancel(payload, jobs));
   ipcMain.handle('jobs.get', (_event, payload: unknown) => handleJobsGet(payload, jobs));
   ipcMain.handle('jobs.listRecent', (_event, payload: unknown) => handleJobsListRecent(payload, jobs));
+  ipcMain.handle('jobs.costPreview', (_event, payload: unknown) => handleJobsCostPreview(payload, jobs));
   ipcMain.handle('jobs.tileThumbnail', (_event, payload: unknown) => handleJobsTileThumbnail(payload, jobs));
   ipcMain.handle('intake.preview', (_event, payload: unknown) => handleIntakePreview(payload, assets));
   ipcMain.handle('slicer.plan', (_event, payload: unknown) => handleSlicerPlan(payload, assets));

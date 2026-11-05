@@ -6,6 +6,7 @@ export type {
   CategoryKind,
   CategorySource,
   CategorySuggestion,
+  CostPreview,
   CreateJobRequest,
   ImagePreview,
   EnhanceAttachment,

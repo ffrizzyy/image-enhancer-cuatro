@@ -1,10 +1,11 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 
-import type { Job, JobProgress, JobSummary, Pacing, ProviderId, SessionStatus, ImagePreview } from '@ie/contracts';
+import type { CostPreview, Job, JobProgress, JobSummary, Pacing, ProviderId, SessionStatus, ImagePreview } from '@ie/contracts';
 import {
   applyJobEvent,
   cancelJob,
+  costForTiles,
   IllegalTransitionError,
   jobProgress,
   pauseJob,
@@ -65,6 +66,8 @@ export interface JobService {
   cancel(jobId: string): JobProgress;
   get(jobId: string): JobProgress;
   listRecent(limit?: number): JobSummary[];
+  /** What a run of this many tiles would cost, before any job exists. */
+  costPreview(providerId: ProviderId, tileCount: number): CostPreview;
   tileThumbnail(jobId: string, index: number, maxSide?: number): Promise<ImagePreview>;
   /** Call once on startup: brings jobs that were in flight when the app closed back to a state that can continue. */
   restore(): RestoredJob[];
@@ -203,6 +206,7 @@ export function createJobService(deps: JobServiceDeps): JobService {
 
     get: progressOf,
     listRecent: (limit) => recentJobs(store, limit ?? 10),
+    costPreview: (providerId, tileCount) => costForTiles(tileCount, providerId, deps.pacing),
 
     async tileThumbnail(jobId, index, maxSide = DEFAULT_THUMBNAIL_PX) {
       const tile = store.getTile(jobId, index);

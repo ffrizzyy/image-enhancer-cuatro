@@ -313,6 +313,13 @@ export interface JobSummary {
   totalTiles: number;
 }
 
+/** What a run will cost before it starts: how many generations, roughly how long, and what it uses up. */
+export interface CostPreview {
+  tiles: number;
+  estimatedMinutes: number;
+  quotaNote: string;
+}
+
 export interface IpcContract {
   'app.ping': { request: void; response: { version: string; ipcVersion: number } };
   'sessions.open': { request: { providerId: ProviderId; visible?: boolean }; response: SessionHandle };
@@ -332,6 +339,7 @@ export interface IpcContract {
     request: { assetId: string; grid: Grid; overlapPct: number; wrap?: boolean };
     response: TilePlan;
   };
+  'jobs.costPreview': { request: { providerId: ProviderId; tileCount: number }; response: CostPreview };
   /** A small picture of a tile's current output, for the Run screen. */
   'jobs.tileThumbnail': { request: { jobId: string; index: number; maxSide?: number }; response: ImagePreview };
   'jobs.start': { request: { jobId: string }; response: { jobId: string; state: JobState } };

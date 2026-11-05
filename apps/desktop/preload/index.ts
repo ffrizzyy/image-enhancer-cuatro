@@ -29,6 +29,8 @@ export interface IeApi {
     cancel(jobId: string): Promise<IpcResult<IpcResponse<'jobs.cancel'>>>;
     get(jobId: string): Promise<IpcResult<IpcResponse<'jobs.get'>>>;
     listRecent(limit?: number): Promise<IpcResult<IpcResponse<'jobs.listRecent'>>>;
+    /** What a run of this many tiles would cost, before any job exists. */
+    costPreview(request: IpcRequest<'jobs.costPreview'>): Promise<IpcResult<IpcResponse<'jobs.costPreview'>>>;
     tileThumbnail(request: IpcRequest<'jobs.tileThumbnail'>): Promise<IpcResult<IpcResponse<'jobs.tileThumbnail'>>>;
     /** Live job progress, pushed whenever a job or one of its tiles changes. Returns an unsubscribe function. */
     onProgress(listener: (event: IpcEvents['jobs.progress']) => void): () => void;
@@ -80,6 +82,7 @@ const api: IeApi = {
     cancel: (jobId) => invoke('jobs.cancel', { jobId }),
     get: (jobId) => invoke('jobs.get', { jobId }),
     listRecent: (limit) => invoke('jobs.listRecent', limit === undefined ? {} : { limit }),
+    costPreview: (request) => invoke('jobs.costPreview', request),
     tileThumbnail: (request) => invoke('jobs.tileThumbnail', request),
     onProgress: (listener) => {
       const handler = (_event: unknown, payload: IpcEvents['jobs.progress']) => listener(payload);

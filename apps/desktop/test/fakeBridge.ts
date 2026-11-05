@@ -37,6 +37,7 @@ export function installBridge(overrides: { settings?: AppSettings } = {}) {
     getJob: vi.fn(),
     listRecent: vi.fn(),
     tileThumbnail: vi.fn(),
+    costPreview: vi.fn(),
     listPresets: vi.fn(),
     suggest: vi.fn(),
     pathFor: vi.fn(),
@@ -88,6 +89,10 @@ export function installBridge(overrides: { settings?: AppSettings } = {}) {
   bridge.startJob.mockImplementation(async (jobId: string) => ({ ok: true, value: { jobId, state: 'preflight' } }));
   bridge.listRecent.mockImplementation(async () => ({ ok: true, value: useShellStore.getState().recentJobs }));
   bridge.tileThumbnail.mockResolvedValue({ ok: true, value: { dataUrl: 'data:image/jpeg;base64,BBBB', width: 160, height: 120 } });
+  bridge.costPreview.mockImplementation(async (request: { providerId: string; tileCount: number }) => ({
+    ok: true,
+    value: { tiles: request.tileCount, estimatedMinutes: Math.max(1, Math.round(request.tileCount * 0.6)), quotaNote: `This run makes ${request.tileCount} image generation${request.tileCount === 1 ? '' : 's'} on your ${request.providerId} account, plus any retries.` },
+  }));
   bridge.status.mockResolvedValue({ ok: true, value: 'unknown' });
   bridge.clear.mockResolvedValue({ ok: true, value: { cleared: true } });
   bridge.getSettings.mockResolvedValue({ ok: true, value: overrides.settings ?? acknowledgedSettings });
@@ -108,6 +113,7 @@ export function installBridge(overrides: { settings?: AppSettings } = {}) {
       get: bridge.getJob,
       listRecent: bridge.listRecent,
       tileThumbnail: bridge.tileThumbnail,
+      costPreview: bridge.costPreview,
       onProgress: (listener) => {
         progressListeners.add(listener);
         return () => progressListeners.delete(listener);
@@ -147,6 +153,7 @@ export function installBridge(overrides: { settings?: AppSettings } = {}) {
     draft: emptyDraft(),
     detection: { status: 'idle' },
     plan: { status: 'idle' },
+    cost: { status: 'idle' },
     preview: null,
     previewError: null,
     job: null,

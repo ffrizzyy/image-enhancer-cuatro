@@ -455,6 +455,10 @@ export const ipcSchemas = {
     }),
     response: TilePlanSchema,
   },
+  'jobs.costPreview': {
+    request: z.object({ providerId: ProviderIdSchema, tileCount: z.number().int().min(1).max(36) }),
+    response: z.object({ tiles: z.number().int().min(1), estimatedMinutes: z.number().int().min(1), quotaNote: z.string().max(1000) }),
+  },
   'jobs.tileThumbnail': {
     request: z.object({ jobId: id, index: z.number().int().min(0), maxSide: z.number().int().min(32).max(1024).optional() }),
     response: ImagePreviewSchema,

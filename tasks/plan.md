@@ -971,6 +971,12 @@ cost preview with Start gating.
 **Files likely touched:** `renderer/src/screens/Run.tsx`, `components/PauseBanner.tsx`, `components/CostPreview.tsx`, `hooks/useJobControl.ts`, `test/runControls.test.tsx`
 **Estimated scope:** M (5 files)
 
+**T28 outcome (2026-11-05):**
+- **Controls** (`RunControls`): Pause (only while running), Cancel job (every state that can still change), and "Check again and start" for a job whose pre-run checks were blocked (with the reasons shown). Cancel asks first in an `alertdialog` with the consequence in words, focus on the safe "Keep it", and Escape or "Keep it" backs out and returns focus to the Cancel button. Everything is a real button or checkbox, so the keyboard works as usual.
+- **Banners** (`PauseBanner`): rendered by the pause event itself (no polling, so within a frame, not a second), announced as an alert. Human check and logged-out: one primary action, "Open <provider>", which becomes a plain "Resume" as soon as the session monitor reports the provider ready; "Resume anyway" is always available. Usage limit: how long it may last, "Resume anyway" until the time has passed. User pause: Resume. Resume lives only in the banner (a test caught a duplicate button).
+- **Watch mode:** a checkbox on the Run screen saves `watchMode` and applies it to the open provider window straight away; otherwise the window opens only when the person is needed.
+- **Cost preview** on Setup (new `jobs.costPreview`, sharing one formula with the orchestrator): generations, rough minutes and what it uses on the account; it follows the grid and provider. Start was already blocked while the session is not ready; if the real pre-run check fails, the run does not start and the Run screen shows why with a way to try again.
+- Verified: 333 desktop tests (38 new), the app smoke run (a simulated job inside the built Electron app), types and lint. **Manual keyboard-only and screen-reader passes are still yours to do in the running app** (`IE_FAKE_PROVIDER=1 IE_FAKE_FAIL_RATE=0.3 pnpm --filter @ie/desktop dev` runs the whole flow against the fake provider).
 ### Checkpoint D — After Tasks 23–28
 
 - [ ] 8-tile simulated job with 20% failures completes; every tile is accepted or explicitly `needs-review`.

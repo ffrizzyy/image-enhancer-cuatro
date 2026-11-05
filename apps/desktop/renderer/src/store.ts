@@ -2,6 +2,7 @@ import {
   CURRENT_RISK_NOTICE_VERSION,
   type AppSettings,
   type Category,
+  type CostPreview,
   type CategorySuggestion,
   type ImageAsset,
   type ImagePreview,
@@ -44,6 +45,13 @@ export type PlanState =
   | { status: 'ok'; plan: TilePlan }
   | { status: 'error'; message: string };
 
+/** What the run would cost for the chosen grid and provider. */
+export type CostState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'ok'; cost: CostPreview }
+  | { status: 'error'; message: string };
+
 /** A downscaled picture of the imported image, for the preview. */
 export interface PreviewState extends ImagePreview {
   assetId: string;
@@ -53,6 +61,8 @@ export interface PreviewState extends ImagePreview {
 let detectionRun = 0;
 /** The same guard for plan requests, which are made on every change of the grid fields. */
 let planRun = 0;
+/** And for cost requests. */
+let costRun = 0;
 
 export const ROUTE_IDS = ['home', 'setup', 'run', 'result', 'settings'] as const;
 export type RouteId = (typeof ROUTE_IDS)[number];
@@ -91,6 +101,8 @@ interface ShellState {
   detection: DetectionState;
   /** The tile plan for the draft's grid, kept alongside the draft. */
   plan: PlanState;
+  /** What the run would cost, shown next to Start. */
+  cost: CostState;
   preview: PreviewState | null;
   previewError: string | null;
   /** Created by Start. */
@@ -132,7 +144,13 @@ interface ShellState {
   refreshPlan: () => Promise<void>;
   /** Loads the preview picture once per image. */
   loadPreview: () => Promise<void>;
+  /** Works out what a run of the current plan on the chosen provider would cost. */
+  refreshCost: () => Promise<void>;
   startJob: () => Promise<void>;
+  /** Starts (again) a saved job that has not run yet, for example after its pre-run checks were blocked. */
+  startRun: (jobId: string) => Promise<void>;
+  /** Keeps the provider window visible while a job runs (Watch mode), and applies it to the open session now. */
+  setWatchMode: (on: boolean, providerId?: ProviderId) => Promise<void>;
   /** Starts listening for live job progress and activity; returns the unsubscribe function. */
   subscribeJobs: () => () => void;
   loadRecentJobs: () => Promise<void>;
@@ -170,6 +188,7 @@ export const useShellStore = create<ShellState>((set, get) => ({
   draft: emptyDraft(),
   detection: { status: 'idle' },
   plan: { status: 'idle' },
+  cost: { status: 'idle' },
   preview: null,
   previewError: null,
   job: null,
@@ -216,6 +235,7 @@ export const useShellStore = create<ShellState>((set, get) => ({
           startError: null,
           detection: { status: 'idle' },
           plan: { status: 'idle' },
+          cost: { status: 'idle' },
           preview: null,
           previewError: null,
           route: 'setup',
@@ -368,6 +388,42 @@ export const useShellStore = create<ShellState>((set, get) => ({
       set(result.ok ? { preview: { ...result.value, assetId: asset.id }, previewError: null } : { previewError: result.error.message });
     } catch (error) {
       set({ previewError: `The preview failed to load: ${String(error)}` });
+    }
+  },
+  refreshCost: async () => {
+    const { plan, draft } = get();
+    if (plan.status !== 'ok' || !draft.providerId) {
+      set({ cost: { status: 'idle' } });
+      return;
+    }
+    const run = ++costRun;
+    set((state) => ({ cost: state.cost.status === 'ok' ? state.cost : { status: 'loading' } }));
+    try {
+      const result = await ipc.jobs.costPreview({ providerId: draft.providerId, tileCount: plan.plan.tiles.length });
+      if (run !== costRun) return;
+      set({ cost: result.ok ? { status: 'ok', cost: result.value } : { status: 'error', message: result.error.message } });
+    } catch (error) {
+      if (run === costRun) set({ cost: { status: 'error', message: `The cost could not be worked out: ${String(error)}` } });
+    }
+  },
+  startRun: async (jobId) => {
+    set({ runError: null });
+    try {
+      const result = await ipc.jobs.start(jobId);
+      if (!result.ok) set({ runError: result.error.message });
+    } catch (error) {
+      set({ runError: `Could not start the job: ${String(error)}` });
+    }
+  },
+  setWatchMode: async (on, providerId) => {
+    try {
+      const saved = await ipc.settings.set({ watchMode: on });
+      if (saved.ok) set({ settings: saved.value });
+      else set({ settingsError: saved.error.message });
+      // Apply it to the provider window that is open now, not only to the next run.
+      if (providerId) await ipc.sessions.open(providerId, on);
+    } catch (error) {
+      set({ settingsError: `Watch mode could not be changed: ${String(error)}` });
     }
   },
   startJob: async () => {
