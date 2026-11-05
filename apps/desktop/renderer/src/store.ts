@@ -160,6 +160,14 @@ interface ShellState {
   /** Continues a paused job (or one restored after a restart) and shows it. */
   resumeJob: (jobId: string) => Promise<void>;
   cancelJob: (jobId: string) => Promise<void>;
+  /** Review: keep a tile that was set aside exactly as its best attempt came back. */
+  acceptTile: (jobId: string, index: number) => Promise<void>;
+  /** Review: generate a tile again, with a fresh set of retries. */
+  rerunTile: (jobId: string, index: number) => Promise<void>;
+  /** Review: keep every tile that was set aside as it is. */
+  acceptAllReview: (jobId: string) => Promise<void>;
+  /** Review: every tile is settled, so put the picture together. */
+  finishReview: (jobId: string) => Promise<void>;
 }
 
 /** How many activity lines are kept per job. */
@@ -493,6 +501,40 @@ export const useShellStore = create<ShellState>((set, get) => ({
       else set({ runError: result.error.message });
     } catch (error) {
       set({ runError: `Could not resume the job: ${String(error)}` });
+    }
+  },
+  acceptTile: async (jobId, index) => {
+    set({ runError: null });
+    try {
+      const result = await ipc.jobs.acceptTile(jobId, index);
+      if (result.ok) set((state) => ({ progress: { ...state.progress, [jobId]: result.value } }));
+      else set({ runError: result.error.message });
+    } catch (error) {
+      set({ runError: `Could not accept the tile: ${String(error)}` });
+    }
+  },
+  rerunTile: async (jobId, index) => {
+    set({ runError: null });
+    try {
+      const result = await ipc.jobs.rerunTile(jobId, index);
+      if (result.ok) set((state) => ({ progress: { ...state.progress, [jobId]: result.value } }));
+      else set({ runError: result.error.message });
+    } catch (error) {
+      set({ runError: `Could not re-run the tile: ${String(error)}` });
+    }
+  },
+  acceptAllReview: async (jobId) => {
+    const tiles = get().progress[jobId]?.tiles.filter((t) => t.state === 'needs-review' && t.outputPath) ?? [];
+    for (const tile of tiles) await get().acceptTile(jobId, tile.index);
+  },
+  finishReview: async (jobId) => {
+    set({ runError: null });
+    try {
+      const result = await ipc.jobs.finishReview(jobId);
+      if (result.ok) set((state) => ({ progress: { ...state.progress, [jobId]: result.value } }));
+      else set({ runError: result.error.message });
+    } catch (error) {
+      set({ runError: `Could not put the picture together: ${String(error)}` });
     }
   },
   cancelJob: async (jobId) => {

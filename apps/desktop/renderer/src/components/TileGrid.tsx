@@ -7,6 +7,8 @@ interface TileGridProps {
   jobId: string;
   grid: { rows: number; cols: number };
   tiles: readonly TileProgress[];
+  /** When set, tiles that were set aside get Accept / Try again buttons. */
+  review?: { onAccept: (index: number) => void; onRerun: (index: number) => void };
 }
 
 /** Border and background per state: a second cue next to the symbol and the word. */
@@ -19,7 +21,7 @@ const STATE_STYLE: Record<TileProgress['state'], string> = {
   failed: 'border-solid border-4 border-red-700 bg-red-50',
 };
 
-function TileCell({ jobId, tile }: { jobId: string; tile: TileProgress }) {
+function TileCell({ jobId, tile, review }: { jobId: string; tile: TileProgress; review: TileGridProps['review'] }) {
   const thumbnail = useTileThumbnail(jobId, tile.index, tile.outputPath);
   const { label, symbol } = TILE_STATE_LABELS[tile.state];
   const tries = tile.attempts > 1 ? `, try ${tile.attempts}` : '';
@@ -45,16 +47,28 @@ function TileCell({ jobId, tile }: { jobId: string; tile: TileProgress }) {
         {tries}
       </p>
       {tile.note && tile.state !== 'accepted' && <p className="text-xs text-slate-700">{tile.note}</p>}
+      {review && (tile.state === 'needs-review' || tile.state === 'failed') && (
+        <div className="mt-1 flex flex-wrap gap-1">
+          {tile.state === 'needs-review' && tile.outputPath && (
+            <button type="button" className="rounded border border-slate-500 bg-white px-2 py-0.5 text-xs" aria-label={`Accept tile ${tile.index + 1} as it is`} onClick={() => review.onAccept(tile.index)}>
+              Accept as is
+            </button>
+          )}
+          <button type="button" className="rounded border border-slate-500 bg-white px-2 py-0.5 text-xs" aria-label={`Try tile ${tile.index + 1} again`} onClick={() => review.onRerun(tile.index)}>
+            Try again
+          </button>
+        </div>
+      )}
     </li>
   );
 }
 
 /** The tiles laid out as the picture is cut, each with its picture, state and, when set aside, why. */
-export function TileGrid({ jobId, grid, tiles }: TileGridProps) {
+export function TileGrid({ jobId, grid, tiles, review }: TileGridProps) {
   return (
     <ul aria-label={`Tiles, ${grid.rows} rows by ${grid.cols} columns`} className="grid gap-2" style={{ gridTemplateColumns: `repeat(${grid.cols}, minmax(0, 1fr))` }}>
       {tiles.map((tile) => (
-        <TileCell key={tile.index} jobId={jobId} tile={tile} />
+        <TileCell key={tile.index} jobId={jobId} tile={tile} review={review} />
       ))}
     </ul>
   );

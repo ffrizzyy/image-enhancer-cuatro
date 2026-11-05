@@ -339,6 +339,12 @@ export interface IpcContract {
     request: { assetId: string; grid: Grid; overlapPct: number; wrap?: boolean };
     response: TilePlan;
   };
+  /** Review: keep a tile that was set aside exactly as its best attempt came back. */
+  'jobs.acceptTile': { request: { jobId: string; index: number }; response: JobProgress };
+  /** Review: queue a tile to be generated again with a fresh set of retries. */
+  'jobs.rerunTile': { request: { jobId: string; index: number }; response: JobProgress };
+  /** Review: every tile is settled, so put the picture together. */
+  'jobs.finishReview': { request: { jobId: string }; response: JobProgress };
   'jobs.costPreview': { request: { providerId: ProviderId; tileCount: number }; response: CostPreview };
   /** A small picture of a tile's current output, for the Run screen. */
   'jobs.tileThumbnail': { request: { jobId: string; index: number; maxSide?: number }; response: ImagePreview };

@@ -25,13 +25,14 @@ import { handleAppPing, ipcError } from './ipc/app.js';
 import { handleIntakeImport, handleIntakePreview } from './ipc/intake.js';
 import {
   handleCreateAndRegisterJob,
-  handleJobsCancel,
-  handleJobsCostPreview,
+  handleJobsAcceptTile,
+  handleJobsCancel,  handleJobsCostPreview,
+  handleJobsFinishReview,
   handleJobsGet,
   handleJobsListRecent,
   handleJobsPause,
-  handleJobsResume,
-  handleJobsStart,
+  handleJobsRerunTile,
+  handleJobsResume,  handleJobsStart,
   handleJobsTileThumbnail,
 } from './ipc/jobs.js';
 import { handlePresetsList, handlePresetsSuggest } from './ipc/presets.js';
@@ -79,6 +80,8 @@ function registerIpc(): void {
     manager,
     onStatus: (providerId, status) => {
       if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('sessions.status', { providerId, status });
+      // A job paused for a check or login resumes by itself once the provider is fine again.
+      jobs.onSessionStatus(providerId, status);
     },
   });
   if (!smoke) monitor.start();
@@ -113,7 +116,10 @@ function registerIpc(): void {
     dataDir: userData,
     adapterFor,
     sessionStatus: (providerId) => manager.status(providerId),
-    showProvider: async (providerId) => void (await manager.open(providerId, { visible: true })),
+    // The window comes forward only when a real provider needs the person; the dev fake has nothing to show.
+    ...(wantsDevFake(app.isPackaged) ? {} : { showProvider: async (providerId: ProviderId) => void (await manager.open(providerId, { visible: true })) }),
+    // And goes back to how they want it (hidden unless Watch mode is on) when the job carries on.
+    ...(wantsDevFake(app.isPackaged) ? {} : { restoreWindow: async (providerId: ProviderId) => void (await manager.open(providerId, { visible: settings.get().watchMode })) }),
     emitProgress: (progress) => send('jobs.progress', progress),
     emitLog: (log) => send('jobs.log', log),
   });
@@ -128,6 +134,9 @@ function registerIpc(): void {
   ipcMain.handle('jobs.cancel', (_event, payload: unknown) => handleJobsCancel(payload, jobs));
   ipcMain.handle('jobs.get', (_event, payload: unknown) => handleJobsGet(payload, jobs));
   ipcMain.handle('jobs.listRecent', (_event, payload: unknown) => handleJobsListRecent(payload, jobs));
+  ipcMain.handle('jobs.acceptTile', (_event, payload: unknown) => handleJobsAcceptTile(payload, jobs));
+  ipcMain.handle('jobs.rerunTile', (_event, payload: unknown) => handleJobsRerunTile(payload, jobs));
+  ipcMain.handle('jobs.finishReview', (_event, payload: unknown) => handleJobsFinishReview(payload, jobs));
   ipcMain.handle('jobs.costPreview', (_event, payload: unknown) => handleJobsCostPreview(payload, jobs));
   ipcMain.handle('jobs.tileThumbnail', (_event, payload: unknown) => handleJobsTileThumbnail(payload, jobs));
   ipcMain.handle('intake.preview', (_event, payload: unknown) => handleIntakePreview(payload, assets));

@@ -42,6 +42,35 @@ export const handleJobsResume = (payload: unknown, service: JobService) => jobAc
 export const handleJobsCancel = (payload: unknown, service: JobService) => jobAction('jobs.cancel', payload, (id) => service.cancel(id)) as Promise<IpcResult<IpcResponse<'jobs.get'>>>;
 export const handleJobsGet = (payload: unknown, service: JobService) => jobAction('jobs.get', payload, (id) => service.get(id)) as Promise<IpcResult<IpcResponse<'jobs.get'>>>;
 
+type TileChannel = 'jobs.acceptTile' | 'jobs.rerunTile';
+
+async function tileAction(channel: TileChannel, payload: unknown, run: (jobId: string, index: number) => Promise<IpcResponse<'jobs.get'>> | IpcResponse<'jobs.get'>): Promise<IpcResult<IpcResponse<'jobs.get'>>> {
+  const request = parseIpcRequest(channel, payload);
+  if (!request.ok) return ipcError('invalid_request', request.error);
+  try {
+    const response = parseIpcResponse(channel, await run(request.value.jobId, request.value.index));
+    return response.ok ? { ok: true, value: response.value } : ipcError('invalid_response', response.error);
+  } catch (error) {
+    return toIpcError(error);
+  }
+}
+
+/** Review: keep a tile that was set aside exactly as it came back. */
+export const handleJobsAcceptTile = (payload: unknown, service: JobService) => tileAction('jobs.acceptTile', payload, (id, index) => service.acceptTile(id, index));
+/** Review: generate a tile again, with a fresh set of retries. */
+export const handleJobsRerunTile = (payload: unknown, service: JobService) => tileAction('jobs.rerunTile', payload, (id, index) => service.rerunTile(id, index));
+
+/** Review: every tile is settled, so put the picture together. */
+export async function handleJobsFinishReview(payload: unknown, service: JobService): Promise<IpcResult<IpcResponse<'jobs.get'>>> {
+  const request = parseIpcRequest('jobs.finishReview', payload);
+  if (!request.ok) return ipcError('invalid_request', request.error);
+  try {
+    const response = parseIpcResponse('jobs.finishReview', await service.finishReview(request.value.jobId));
+    return response.ok ? { ok: true, value: response.value } : ipcError('invalid_response', response.error);
+  } catch (error) {
+    return toIpcError(error);
+  }
+}
 export function handleJobsListRecent(payload: unknown, service: JobService): IpcResult<IpcResponse<'jobs.listRecent'>> {
   const request = parseIpcRequest('jobs.listRecent', payload ?? {});
   if (!request.ok) return ipcError('invalid_request', request.error);

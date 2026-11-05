@@ -38,6 +38,9 @@ export function installBridge(overrides: { settings?: AppSettings } = {}) {
     listRecent: vi.fn(),
     tileThumbnail: vi.fn(),
     costPreview: vi.fn(),
+    acceptTile: vi.fn(),
+    rerunTile: vi.fn(),
+    finishReview: vi.fn(),
     listPresets: vi.fn(),
     suggest: vi.fn(),
     pathFor: vi.fn(),
@@ -114,6 +117,9 @@ export function installBridge(overrides: { settings?: AppSettings } = {}) {
       listRecent: bridge.listRecent,
       tileThumbnail: bridge.tileThumbnail,
       costPreview: bridge.costPreview,
+      acceptTile: bridge.acceptTile,
+      rerunTile: bridge.rerunTile,
+      finishReview: bridge.finishReview,
       onProgress: (listener) => {
         progressListeners.add(listener);
         return () => progressListeners.delete(listener);

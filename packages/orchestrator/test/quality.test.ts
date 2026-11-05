@@ -107,6 +107,15 @@ describe('sanity checks', () => {
     expect(verdict.reasons[0]).toMatch(/only 120x80 px/);
   });
 
+  it('accepts a small tile coming back at least as large as it was sent, even under 256 px', async () => {
+    const tiny = await resized(source, 120, 80);
+    const verdict = await evaluateOutput({ outputPath: await file(await resized(source, 240, 160)), sourceTile: tiny, send: { width: 120, height: 80 }, fidelity: 'strict' });
+    expect(verdict.accepted).toBe(true);
+    // But smaller than what was sent is still too small.
+    const shrunk = await evaluateOutput({ outputPath: await file(await resized(source, 90, 60)), sourceTile: tiny, send: { width: 120, height: 80 }, fidelity: 'reimagine' });
+    expect(shrunk.reasons[0]).toMatch(/only 90x60 px/);
+  });
+
   it('rejects an output reframed to a different shape, but allows rounding differences', async () => {
     expect((await judge(await resized(source, 600, 600), 'reimagine')).reasons[0]).toMatch(/different shape/);
     expect((await judge(await resized(source, 900, 604), 'strict')).accepted).toBe(true); // 0.7% off: rounding

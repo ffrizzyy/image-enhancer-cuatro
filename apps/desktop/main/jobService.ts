@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { CostPreview, Job, JobProgress, JobSummary, Pacing, ProviderId, SessionStatus, ImagePreview } from '@ie/contracts';
 import {
   applyJobEvent,
+  applyTileEvent,
   cancelJob,
   costForTiles,
   IllegalTransitionError,
@@ -48,6 +49,10 @@ export interface JobServiceDeps {
   sessionStatus: (providerId: ProviderId) => Promise<SessionStatus>;
   /** Brings the provider window to the front, for a captcha or a login. */
   showProvider?: (providerId: ProviderId) => void | Promise<void>;
+  /** Puts the provider window back the way the user wants it (hidden unless Watch mode is on), when a job resumes. */
+  restoreWindow?: (providerId: ProviderId) => void | Promise<void>;
+  /** A job paused by the provider, not by the user, resumes by itself once the cause is gone. */
+  autoResume?: { settleMs?: number; maxInARow?: number };
   emitProgress: (progress: JobProgress) => void;
   emitLog: (log: { jobId: string; level: 'info' | 'warn' | 'error'; message: string }) => void;
   pacing?: Pacing;
@@ -64,6 +69,14 @@ export interface JobService {
   /** Continues a paused job, or one restored after a restart. */
   resume(jobId: string): Promise<JobProgress>;
   cancel(jobId: string): JobProgress;
+  /** Review: keeps a tile that was set aside exactly as its best attempt came back. */
+  acceptTile(jobId: string, index: number): JobProgress;
+  /** Review: queues a tile to be generated again (with a fresh set of retries) and carries on with the job. */
+  rerunTile(jobId: string, index: number): Promise<JobProgress>;
+  /** Review: every tile is settled, so the picture is put together. */
+  finishReview(jobId: string): Promise<JobProgress>;
+  /** Tell the service a provider's session status changed: a job paused for a check or login resumes once it is `ready`. */
+  onSessionStatus(providerId: ProviderId, status: SessionStatus): void;
   get(jobId: string): JobProgress;
   listRecent(limit?: number): JobSummary[];
   /** What a run of this many tiles would cost, before any job exists. */
@@ -84,6 +97,53 @@ export function createJobService(deps: JobServiceDeps): JobService {
   const { store } = deps;
   const running = new Map<string, { promise: Promise<unknown>; abort: AbortController }>();
   const queued = new Set<string>();
+
+  // Auto-resume: at most `maxInARow` times without a tile finishing in between, so a problem the provider keeps
+  // reporting cannot make a job pause and resume forever.
+  const settleMs = deps.autoResume?.settleMs ?? 3000;
+  const maxInARow = deps.autoResume?.maxInARow ?? 3;
+  const autoCount = new Map<string, { count: number; completedAtLast: number }>();
+  const timers = new Map<string, ReturnType<typeof setTimeout>>();
+
+  const clearTimer = (jobId: string): void => {
+    const timer = timers.get(jobId);
+    if (timer) clearTimeout(timer);
+    timers.delete(jobId);
+  };
+
+  function scheduleAutoResume(jobId: string, delayMs: number): void {
+    clearTimer(jobId);
+    const timer = setTimeout(() => {
+      timers.delete(jobId);
+      try {
+        tryAutoResume(jobId);
+      } catch {
+        /* the database was closed (the app is quitting): there is nothing left to resume */
+      }
+    }, Math.min(Math.max(0, delayMs), 24 * 60 * 60 * 1000));
+    timer.unref?.();
+    timers.set(jobId, timer);
+  }
+
+  function tryAutoResume(jobId: string): void {
+    const record = store.getJob(jobId);
+    if (!record || record.state !== 'paused' || running.has(jobId)) return;
+    if (record.pauseReason === 'user' || record.pauseReason === null) return; // only what the provider caused
+    const completed = store.listTiles(jobId).filter((t) => t.state === 'accepted').length;
+    const seen = autoCount.get(jobId) ?? { count: 0, completedAtLast: completed };
+    const count = completed > seen.completedAtLast ? 0 : seen.count;
+    if (count >= maxInARow) {
+      deps.emitLog({ jobId, level: 'warn', message: 'The job keeps pausing for the same reason, so it will not resume by itself again. Resume it when you have looked at the provider.' });
+      return;
+    }
+    autoCount.set(jobId, { count: count + 1, completedAtLast: completed });
+    deps.emitLog({ jobId, level: 'info', message: 'Resuming by itself: the provider looks fine again.' });
+    try {
+      begin(jobId, ['paused'], 'resumed');
+    } catch (error) {
+      deps.emitLog({ jobId, level: 'warn', message: `It could not resume by itself: ${error instanceof Error ? error.message : String(error)}` });
+    }
+  }
 
   const progressOf = (jobId: string): JobProgress => {
     const progress = jobProgress(store, jobId);
@@ -119,6 +179,14 @@ export function createJobService(deps: JobServiceDeps): JobService {
           onPause: async (notice: PauseNotice) => {
             // A captcha or a login can only be solved by the person, in the provider's own window.
             if (notice.reason === 'challenge' || notice.reason === 'logged-out') await deps.showProvider?.(notice.providerId);
+
+            // Then wait for the cause to go away. A usage limit waits for its time; a check or login resumes when the
+            // session monitor reports the provider ready (below), or soon if it already does.
+            if (notice.reason === 'quota') {
+              scheduleAutoResume(jobId, notice.resumeAfter ? Date.parse(notice.resumeAfter) - Date.now() : settleMs);
+            } else if ((await deps.sessionStatus(notice.providerId)) === 'ready') {
+              scheduleAutoResume(jobId, settleMs);
+            }
           },
           ...deps.runOptions,
         });
@@ -157,8 +225,11 @@ export function createJobService(deps: JobServiceDeps): JobService {
     if (running.has(jobId)) return progressOf(jobId);
     if (!allowed.includes(record.state)) throw new JobServiceError('illegal', `A job that is ${record.state} cannot be ${verb}.`);
     assertProviderFree(jobId, record.job.providerId);
+    clearTimer(jobId);
     // Show the pre-run checks at once; the run itself starts as soon as the provider is ready.
     if (record.state === 'idle') applyJobEvent(store, jobId, { type: 'START' });
+    // Coming back from a pause (a check, a login), the window the person used goes back to how they want it.
+    if (record.state === 'paused') void Promise.resolve(deps.restoreWindow?.(record.job.providerId)).catch(() => {});
     launch(jobId);
     return progressOf(jobId);
   }
@@ -200,8 +271,48 @@ export function createJobService(deps: JobServiceDeps): JobService {
     cancel: (jobId) => {
       if (!store.getJob(jobId)) throw new JobServiceError('not-found', 'That job no longer exists.');
       guard(() => cancelJob(store, jobId));
+      clearTimer(jobId);
       running.get(jobId)?.abort.abort();
       return progressOf(jobId);
+    },
+
+    acceptTile(jobId, index) {
+      if (!store.getJob(jobId)) throw new JobServiceError('not-found', 'That job no longer exists.');
+      const tile = store.getTile(jobId, index);
+      if (!tile) throw new JobServiceError('not-found', 'That tile does not exist.');
+      if (tile.state !== 'needs-review') throw new JobServiceError('illegal', `Only a tile that needs review can be accepted as it is; this one is ${tile.state}.`);
+      if (!tile.outputPath) throw new JobServiceError('illegal', 'This tile has no picture to keep. Try it again instead.');
+      guard(() => applyTileEvent(store, jobId, index, { type: 'ACCEPT_AS_IS' }));
+      return progressOf(jobId);
+    },
+
+    async rerunTile(jobId, index) {
+      const record = store.getJob(jobId);
+      if (!record) throw new JobServiceError('not-found', 'That job no longer exists.');
+      if (!store.getTile(jobId, index)) throw new JobServiceError('not-found', 'That tile does not exist.');
+      if (!['needs-review', 'done', 'paused', 'running'].includes(record.state)) throw new JobServiceError('illegal', `A tile cannot be re-run while the job is ${record.state}.`);
+      guard(() => applyTileEvent(store, jobId, index, { type: 'RERUN' }));
+      // A running job picks the tile up by itself; a finished or reviewing one is started again; a paused one waits for Resume.
+      if (!running.has(jobId) && (record.state === 'needs-review' || record.state === 'done')) return begin(jobId, ['needs-review', 'done'], 're-run');
+      return progressOf(jobId);
+    },
+
+    async finishReview(jobId) {
+      const record = store.getJob(jobId);
+      if (!record) throw new JobServiceError('not-found', 'That job no longer exists.');
+      if (record.state !== 'needs-review') throw new JobServiceError('illegal', `A job that is ${record.state} is not waiting for a review.`);
+      const waiting = store.listTiles(jobId).find((t) => t.state === 'needs-review' || t.state === 'failed' || t.state === 'pending' || t.state === 'retrying' || t.state === 'running');
+      if (waiting) throw new JobServiceError('illegal', `Tile ${waiting.index + 1} still needs a decision: accept it as it is, or try it again.`);
+      guard(() => applyJobEvent(store, jobId, { type: 'REVIEW_DONE' }));
+      return begin(jobId, ['stitching'], 'stitched');
+    },
+
+    onSessionStatus(providerId, status) {
+      if (status !== 'ready') return;
+      for (const record of store.listJobs({ states: ['paused'] })) {
+        if (record.job.providerId !== providerId || running.has(record.job.id)) continue;
+        if (record.pauseReason === 'challenge' || record.pauseReason === 'logged-out') scheduleAutoResume(record.job.id, 500);
+      }
     },
 
     get: progressOf,

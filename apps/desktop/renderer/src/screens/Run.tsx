@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { PauseBanner } from '../components/PauseBanner';
+import { ReviewPanel } from '../components/ReviewPanel';
 import { RunControls } from '../components/RunControls';
 import { TileGrid } from '../components/TileGrid';
 import { JOB_STATE_LABELS, PROVIDER_NAMES } from '../labels';
@@ -82,12 +83,20 @@ export function Run() {
           />
 
           {progress.state === 'needs-review' && (
-            <p role="status" className="rounded border border-orange-400 bg-orange-50 p-3 text-sm">
-              Some tiles need a look before the picture can be put together. They are marked in the grid.
-            </p>
+            <ReviewPanel
+              progress={progress}
+              onAcceptAll={() => void store().acceptAllReview(progress.jobId)}
+              onFinish={() => void store().finishReview(progress.jobId)}
+            />
           )}
-
-          {progress.grid && <TileGrid jobId={progress.jobId} grid={progress.grid} tiles={progress.tiles} />}
+          {progress.grid && (
+            <TileGrid
+              jobId={progress.jobId}
+              grid={progress.grid}
+              tiles={progress.tiles}
+              {...(progress.state === 'needs-review' ? { review: { onAccept: (i: number) => void store().acceptTile(progress.jobId, i), onRerun: (i: number) => void store().rerunTile(progress.jobId, i) } } : {})}
+            />
+          )}
 
           {log && log.length > 0 && (
             <details className="text-sm">

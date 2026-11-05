@@ -115,7 +115,10 @@ export async function evaluateOutput({ outputPath, sourceTile, send, fidelity }:
   }
   const { width, height } = output;
 
-  if (Math.max(width, height) < MIN_OUTPUT_PX) return reject([`The output is only ${width}x${height} px, too small to use.`], null, width, height);
+  // At least 256 px, but never more than the tile itself was: a small tile can only come back so big, and a result
+  // as large as what was sent is no loss.
+  const minimum = Math.min(MIN_OUTPUT_PX, Math.max(send.width, send.height));
+  if (Math.max(width, height) < minimum) return reject([`The output is only ${width}x${height} px, too small to use.`], null, width, height);
   const aspect = width / height / (send.width / send.height);
   if (Math.abs(aspect - 1) > ASPECT_TOLERANCE) {
     return reject([`The output is ${width}x${height} px, a different shape from the tile (${send.width}x${send.height}); the provider reframed it.`], null, width, height);

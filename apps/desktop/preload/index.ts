@@ -29,6 +29,12 @@ export interface IeApi {
     cancel(jobId: string): Promise<IpcResult<IpcResponse<'jobs.cancel'>>>;
     get(jobId: string): Promise<IpcResult<IpcResponse<'jobs.get'>>>;
     listRecent(limit?: number): Promise<IpcResult<IpcResponse<'jobs.listRecent'>>>;
+    /** Review: keep a tile that was set aside exactly as it came back. */
+    acceptTile(jobId: string, index: number): Promise<IpcResult<IpcResponse<'jobs.acceptTile'>>>;
+    /** Review: generate a tile again with a fresh set of retries. */
+    rerunTile(jobId: string, index: number): Promise<IpcResult<IpcResponse<'jobs.rerunTile'>>>;
+    /** Review: every tile is settled, so put the picture together. */
+    finishReview(jobId: string): Promise<IpcResult<IpcResponse<'jobs.finishReview'>>>;
     /** What a run of this many tiles would cost, before any job exists. */
     costPreview(request: IpcRequest<'jobs.costPreview'>): Promise<IpcResult<IpcResponse<'jobs.costPreview'>>>;
     tileThumbnail(request: IpcRequest<'jobs.tileThumbnail'>): Promise<IpcResult<IpcResponse<'jobs.tileThumbnail'>>>;
@@ -82,6 +88,9 @@ const api: IeApi = {
     cancel: (jobId) => invoke('jobs.cancel', { jobId }),
     get: (jobId) => invoke('jobs.get', { jobId }),
     listRecent: (limit) => invoke('jobs.listRecent', limit === undefined ? {} : { limit }),
+    acceptTile: (jobId, index) => invoke('jobs.acceptTile', { jobId, index }),
+    rerunTile: (jobId, index) => invoke('jobs.rerunTile', { jobId, index }),
+    finishReview: (jobId) => invoke('jobs.finishReview', { jobId }),
     costPreview: (request) => invoke('jobs.costPreview', request),
     tileThumbnail: (request) => invoke('jobs.tileThumbnail', request),
     onProgress: (listener) => {
