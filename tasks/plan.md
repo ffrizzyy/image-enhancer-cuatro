@@ -883,6 +883,12 @@ Add the `sim` CLI.
 **Files likely touched:** `src/tileRunner.ts`, `src/preflight.ts`, `src/quality.ts`, `src/attachments.ts`, `src/cli/sim.ts`, `test/quality.test.ts`, `test/sim.integration.test.ts`
 **Estimated scope:** M/L (7 files) — split further if implementation exceeds one session
 
+**T25 outcome (2026-11-05):** `runJob()` runs a job end to end; `pnpm --filter @ie/orchestrator sim -- --tiles 8 --fail-rate 0.2` completes (8 accepted, stitched 1600x800, seam score 1.01).
+- **Quality gate** (`quality.ts`): decodes; at least 256 px; shape within 8% of the tile's; not a blank frame; and a low-frequency structural similarity (32x32 greyscale, windowed SSIM) to the source tile above 0.90 / 0.80 / 0.65 / 0.40 for strict / preserve / balanced / reimagine. Fixture tests sit an output between each pair of thresholds and check all four levels accept or reject exactly as expected.
+- **Per call:** tile (its `send` rect), then a whole-picture reference downscaled to 768 px (described in the prompt as context only), then, in `chained` mode, the already-enhanced strip of the nearest finished neighbour (left, then above, then the rest). Fewer attachments allowed: strip dropped first, then the reference, never the tile.
+- **Rules:** retries up to 2 times with a preserve-composition clause, then `needs-review` (the best output is kept for the reviewer); a refusal gets one softened-wording retry, a second goes to review; timeout and download failures use a try; `challenge`/`logged-out`/`quota` queue the tile again (no try used) and pause the job (quota with a resume-after of one hour); `ui-changed` fails the job naming the selector. Preflight blocks on a session that is not `ready` or a page whose selectors are missing, and returns a cost preview.
+- `chained` runs one tile at a time in raster order; `independent` runs up to `pacing.concurrency`. Random 8-25 s pacing between tiles (none after the last); cancel through an `AbortSignal`.
+- **Left for T26:** the provider-window surfacing, exponential backoff on timeout/ui-changed retries, user pause/resume at any state, and the kill-the-process-mid-run integration test (a crash and restart is already covered by a scripted test).
 ### Task 26: Orchestrator — pauses, backoff, cancel, and crash recovery
 
 **Outcome:** the job pauses safely on captcha/quota/logout and resumes without losing work.

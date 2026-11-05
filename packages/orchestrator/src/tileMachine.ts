@@ -7,8 +7,11 @@ export type TileEvent =
   | { type: 'START' }
   /** The output was accepted by the quality gate. */
   | { type: 'ACCEPT' }
-  /** The output failed the gate, or the provider refused. Retries while attempts remain, else needs a person. */
-  | { type: 'REJECT' }
+  /**
+   * The output failed the gate, or the provider refused. Retries while attempts remain, else needs a person.
+   * `final` sets it aside for review straight away (a second refusal), whatever tries are left.
+   */
+  | { type: 'REJECT'; final?: boolean }
   /** The provider failed in a way that cannot be retried (the job fails with the reason). */
   | { type: 'FAIL' }
   /** The run was cut off (app closed, provider paused the job): the tile goes back in the queue without using a retry. */
@@ -41,7 +44,7 @@ export function tileTransition(state: TileState, triesUsed: number, event: TileE
       break;
     case 'running':
       if (event.type === 'ACCEPT') return to('accepted');
-      if (event.type === 'REJECT') return to(triesUsed < MAX_ATTEMPTS ? 'retrying' : 'needs-review');
+      if (event.type === 'REJECT') return to(!event.final && triesUsed < MAX_ATTEMPTS ? 'retrying' : 'needs-review');
       if (event.type === 'FAIL') return to('failed');
       if (event.type === 'INTERRUPT') return to('pending');
       break;

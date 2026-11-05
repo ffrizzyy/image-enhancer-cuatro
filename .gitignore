@@ -11,3 +11,5 @@ Thumbs.db
 apps/desktop/release/
 **/dist-test/
 
+
+.sim-build/

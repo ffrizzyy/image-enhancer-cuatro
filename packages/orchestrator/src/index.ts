@@ -21,3 +21,16 @@ export type { TileEvent, TileEventType, TileTransition } from './tileMachine.ts'
 export { applyJobEvent, applyTileEvent, beginTile, IllegalTransitionError, triesUsed } from './transitions.ts';
 export { isRunnable, nextRunnableTile, restoreJobs, settledOutcome, summarizeTiles } from './resume.ts';
 export type { RestoredJob, TileSummary } from './resume.ts';
+export { buildAttachments, neighbourStrip, prepareJobFiles, REFERENCE_MAX_PX } from './attachments.ts';
+export type { JobFiles } from './attachments.ts';
+export { buildTilePrompt, NEIGHBOR_NOTE, PRESERVE_COMPOSITION_CLAUSE, REFERENCE_NOTE, SOFTENED_USER_PROMPT } from './prompts.ts';
+export { costPreview, DEFAULT_PACING, preflight, TYPICAL_GENERATION_SECONDS } from './preflight.ts';
+export type { CostPreview, PreflightInput, PreflightResult } from './preflight.ts';
+export { evaluateOutput, FIDELITY_THRESHOLDS, structuralSimilarity } from './quality.ts';
+export type { QualityInput, QualityVerdict } from './quality.ts';
+export { DEFAULT_TILE_TIMEOUT_MS, QUOTA_RESUME_AFTER_MS, runTile } from './tileRunner.ts';
+export type { TileOutcome, TileRunDeps } from './tileRunner.ts';
+export { DEFAULT_STITCH_OPTIONS, runJob } from './runner.ts';
+export type { RunJobOptions, RunJobResult, StitchFn } from './runner.ts';
+export { gridFor, runSimulation } from './sim.ts';
+export type { SimulationOptions, SimulationResult, SimulationTile } from './sim.ts';
