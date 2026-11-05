@@ -827,6 +827,11 @@ atomic transactional updates in the user data folder.
 **Files likely touched:** `packages/orchestrator/package.json`, `src/store.ts`, `src/migrations/*.sql`, `test/store.test.ts`
 **Estimated scope:** M (4–5 files)
 
+**T23 outcome (2026-11-05):** `@ie/orchestrator` has the SQLite store (`jobs`, `tiles`, `attempts`, `events`; versioned migrations; WAL, `busy_timeout`, `synchronous = FULL`, foreign keys).
+- **Decision (replaces `better-sqlite3`):** the store uses Node's built-in `node:sqlite` (SQLite 3.53), which works in Electron 45's Node 24.22 (checked). No native module to rebuild, package or get blocked by Smart App Control; the plan's `sql.js` fallback is not needed. It prints an "experimental" notice in Node; the store sits behind its own `Store` interface so the engine can be swapped.
+- Migrations live in `src/migrations.ts` (not `.sql` files) so the bundled app needs no extra files; `user_version` tracks them and a database from a newer app is refused. A failed open closes the handle.
+- Verified with real processes: a child killed mid-job leaves every committed change and an unfinished attempt (start, no end) for resume to find; readers are not blocked by a writer; a second writer waits within the busy timeout, or fails with an error instead of hanging.
+- Source files import each other with `.ts` extensions so Node can run the store directly (that is how the crash test works).
 ### Task 24: Orchestrator — job state machine and resume
 
 **Outcome:** jobs transition legally and resume from the first unfinished tile after a restart.

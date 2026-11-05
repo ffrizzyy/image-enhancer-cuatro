@@ -57,13 +57,13 @@ Parallel tracks: slicer (T14–T16), providers (T17–T19), stitcher (T20–T22)
 - [x] **T22** Stitcher: harmonization, metrics, performance gate — deps: T21
 
 ### Checkpoint C — after T14–T22 (RISK GATE)
-- [ ] Slice → unchanged stitch pixel-identical; GPT live smoke ≥1024 px; stitcher <20 s at 8192×4096
-- [ ] **If GPT live smoke fails, stop and reassess**
-- [ ] Human review before Phase 3
+- [x] Slice → unchanged stitch pixel-identical; GPT live smoke ≥1024 px; stitcher <20 s at 8192×4096
+- [x] **If GPT live smoke fails, stop and reassess** (it passed: 1536x1024)
+- [x] Human review before Phase 3
 
 ## Phase 3 — Orchestration and Run UI
 
-- [ ] **T23** Orchestrator: SQLite store — deps: T2
+- [x] **T23** Orchestrator: SQLite store — deps: T2
 - [ ] **T24** Orchestrator: job state machine and resume — deps: T23
 - [ ] **T25** Orchestrator: full job runner and simulation CLI — deps: T24, T17, T14, T15, T10, T11
 - [ ] **T26** Orchestrator: pauses, backoff, cancel, crash recovery — deps: T25, T8
