@@ -1,7 +1,7 @@
 import type { Rect, TilePlan } from '@ie/contracts';
 import type { Rgba } from '@ie/slicer';
 
-import { labToRgb8, rgbToLab, type Lab } from './color';
+import { labToRgb8, labToRgbFloat, rgbToLab, type Lab } from './color';
 
 const CHANNELS = 4;
 /** Overlaps smaller than this (pixels) carry too little information to match on. */
@@ -215,8 +215,96 @@ function report(samples: readonly Samples[], corrections: readonly Correction[])
   return { maxDeltaE: perOverlap.reduce((m, o) => Math.max(m, o.deltaE), 0), perOverlap };
 }
 
-/** Applies a correction in Lab space. An identity correction returns the same image object. */
+/** Images with at least this many pixels use the lookup table; smaller ones are corrected exactly, pixel by pixel. */
+const LUT_MIN_PIXELS = 65_536;
+/** Table nodes per channel: every 8th value from 0 to 248, then 255. */
+const LUT_NODES = 33;
+const NODE_VALUES = Array.from({ length: LUT_NODES }, (_, i) => (i < LUT_NODES - 1 ? i * 8 : 255));
+
+/** For each 8-bit value: the table cell it falls in and how far across it (0..1). */
+const LUT_CELL = new Uint8Array(256);
+const LUT_FRACTION = new Float32Array(256);
+for (let v = 0; v < 256; v++) {
+  const cell = Math.min(LUT_NODES - 2, v >> 3);
+  LUT_CELL[v] = cell;
+  LUT_FRACTION[v] = (v - NODE_VALUES[cell]!) / (NODE_VALUES[cell + 1]! - NODE_VALUES[cell]!);
+}
+
+/**
+ * The correction as a 33x33x33 table of how much each channel changes. The change is small and smooth, so
+ * interpolating it is accurate to a small fraction of a level, where interpolating the colours themselves would not be.
+ */
+function deltaTable(correction: Correction): Float32Array {
+  const { gain, offset } = correction;
+  const table = new Float32Array(LUT_NODES ** 3 * 3);
+  let at = 0;
+  for (const r of NODE_VALUES) {
+    for (const g of NODE_VALUES) {
+      for (const b of NODE_VALUES) {
+        const [l, a, bb] = rgbToLab(r, g, b);
+        const [cr, cg, cb] = labToRgbFloat(gain[0] * l + offset[0], gain[1] * a + offset[1], gain[2] * bb + offset[2]);
+        table[at++] = cr - r;
+        table[at++] = cg - g;
+        table[at++] = cb - b;
+      }
+    }
+  }
+  return table;
+}
+
+function applyWithTable(image: Rgba, correction: Correction): Rgba {
+  const table = deltaTable(correction);
+  const out = Buffer.from(image.data);
+  const strideG = LUT_NODES * 3;
+  const strideR = LUT_NODES * strideG;
+
+  for (let i = 0; i < out.length; i += CHANNELS) {
+    const r = out[i]!;
+    const g = out[i + 1]!;
+    const b = out[i + 2]!;
+    const fr = LUT_FRACTION[r]!;
+    const fg = LUT_FRACTION[g]!;
+    const fb = LUT_FRACTION[b]!;
+    const o = LUT_CELL[r]! * strideR + LUT_CELL[g]! * strideG + LUT_CELL[b]! * 3;
+
+    const w000 = (1 - fr) * (1 - fg) * (1 - fb);
+    const w001 = (1 - fr) * (1 - fg) * fb;
+    const w010 = (1 - fr) * fg * (1 - fb);
+    const w011 = (1 - fr) * fg * fb;
+    const w100 = fr * (1 - fg) * (1 - fb);
+    const w101 = fr * (1 - fg) * fb;
+    const w110 = fr * fg * (1 - fb);
+    const w111 = fr * fg * fb;
+
+    for (let c = 0; c < 3; c++) {
+      const delta =
+        w000 * table[o + c]! +
+        w001 * table[o + 3 + c]! +
+        w010 * table[o + strideG + c]! +
+        w011 * table[o + strideG + 3 + c]! +
+        w100 * table[o + strideR + c]! +
+        w101 * table[o + strideR + 3 + c]! +
+        w110 * table[o + strideR + strideG + c]! +
+        w111 * table[o + strideR + strideG + 3 + c]!;
+      const v = out[i + c]! + delta + 0.5;
+      out[i + c] = v <= 0 ? 0 : v >= 255 ? 255 : v;
+    }
+  }
+  return { data: out, width: image.width, height: image.height };
+}
+
+/**
+ * Applies a correction in Lab space. An identity correction returns the same image object. Large images go through
+ * a lookup table (about four times faster); small ones are corrected exactly.
+ */
 export function applyCorrection(image: Rgba, correction: Correction): Rgba {
+  if (correction.identity) return image;
+  if (image.width * image.height >= LUT_MIN_PIXELS) return applyWithTable(image, correction);
+  return applyExactly(image, correction);
+}
+
+/** The reference implementation: the exact Lab round trip for every pixel. */
+export function applyExactly(image: Rgba, correction: Correction): Rgba {
   if (correction.identity) return image;
   const out = Buffer.from(image.data);
   const { gain, offset } = correction;
@@ -229,7 +317,6 @@ export function applyCorrection(image: Rgba, correction: Correction): Rgba {
   }
   return { data: out, width: image.width, height: image.height };
 }
-
 export interface MatchResult {
   /** The tile images with their corrections applied (untouched tiles are the same objects). */
   images: Map<number, Rgba>;

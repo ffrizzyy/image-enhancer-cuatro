@@ -782,6 +782,11 @@ optional global-pass hook (reference only), and the benchmark.
 **Files likely touched:** `packages/stitcher/src/harmonize.ts`, `src/metrics.ts`, `src/stitch.ts`, `test/metrics.test.ts`, `scripts/metrics.ts`
 **Estimated scope:** M (5 files)
 
+**T22 outcome (2026-11-05):** `stitch()`, `harmonize()` and `seamScore()` are in `packages/stitcher`.
+- Benchmark (`IE_BENCH=1 ... test benchmark`, 8 tiles, 8192x4096, tiles returned at 1536 px with colour casts): **~10.5-11 s total** on the dev machine (load 0.4, align 2.6-3.0, compose 5.4, write 1.6, peak RSS ~1.0 GB). Before optimisation it was 19.9 s (compose 14.5 s). Fixes: 32-bit blocked `transpose`, pyramid `reduce`/`expand` computing only kept samples, lookup-table colour correction for images of 65,536+ pixels. **No `opencv-wasm` fallback needed.**
+- `seamScore` measures abrupt steps (second differences) of the stitched-over-source luminance ratio along each strip overlap, so noise, texture and content edges average out. Unit thresholds hold (seamScore <= 1.2, maxDeltaE <= 3 on shifted and colour-cast synthetic tiles, also in wrap mode). On the noisiest benchmark image it reads ~1.28 (white noise the blurred tiles do not have): informational, not asserted.
+- Harmonization corrects only the *variation* of drift across the image (a smooth 16-cell multiplicative field, wrap-aware), never the overall tone.
+- Deferred: the `metrics` CLI (`pnpm --filter @ie/stitcher metrics -- --job`) has nothing to point at until the orchestrator defines jobs (T25); `stitch()` returns the same numbers.
 ### Checkpoint C — After Tasks 14–22 (RISK GATE)
 
 - [ ] Slice → unchanged stitch is pixel-identical on all fixtures.

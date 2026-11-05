@@ -45,35 +45,46 @@ interface Plane {
 const KERNEL = [1 / 16, 4 / 16, 6 / 16, 4 / 16, 1 / 16];
 const clampIndex = (i: number, n: number): number => (i < 0 ? 0 : i >= n ? n - 1 : i);
 
-/** Separable 5-tap blur with edge replication. */
-function blur(p: Plane): Plane {
-  const tmp = new Float32Array(p.w * p.h);
-  for (let y = 0; y < p.h; y++) {
-    const row = y * p.w;
-    for (let x = 0; x < p.w; x++) {
-      let s = 0;
-      for (let k = 0; k < 5; k++) s += KERNEL[k]! * p.data[row + clampIndex(x + k - 2, p.w)]!;
-      tmp[row + x] = s;
-    }
-  }
-  const out = new Float32Array(p.w * p.h);
-  for (let y = 0; y < p.h; y++) {
-    for (let x = 0; x < p.w; x++) {
-      let s = 0;
-      for (let k = 0; k < 5; k++) s += KERNEL[k]! * tmp[clampIndex(y + k - 2, p.h) * p.w + x]!;
-      out[y * p.w + x] = s;
-    }
-  }
-  return { data: out, w: p.w, h: p.h };
-}
+const [K0, K1, K2, K3, K4] = KERNEL as [number, number, number, number, number];
 
+/**
+ * Blur by the 5-tap kernel and drop every other row and column, computing only the pixels that are kept.
+ * Edges are replicated.
+ */
 function reduce(p: Plane): Plane {
-  const b = blur(p);
   const w = Math.ceil(p.w / 2);
   const h = Math.ceil(p.h / 2);
-  const out = new Float32Array(w * h);
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) out[y * w + x] = b.data[2 * y * p.w + 2 * x]!;
-  return { data: out, w, h };
+
+  // Horizontal pass, at the kept columns only.
+  const tmp = new Float32Array(w * p.h);
+  for (let y = 0; y < p.h; y++) {
+    const row = y * p.w;
+    const out = y * w;
+    for (let xo = 0; xo < w; xo++) {
+      const x = 2 * xo;
+      if (x >= 2 && x + 2 < p.w) {
+        tmp[out + xo] = K0 * p.data[row + x - 2]! + K1 * p.data[row + x - 1]! + K2 * p.data[row + x]! + K3 * p.data[row + x + 1]! + K4 * p.data[row + x + 2]!;
+      } else {
+        let s = 0;
+        for (let k = 0; k < 5; k++) s += KERNEL[k]! * p.data[row + clampIndex(x + k - 2, p.w)]!;
+        tmp[out + xo] = s;
+      }
+    }
+  }
+
+  // Vertical pass, at the kept rows only.
+  const result = new Float32Array(w * h);
+  for (let yo = 0; yo < h; yo++) {
+    const y = 2 * yo;
+    const r0 = clampIndex(y - 2, p.h) * w;
+    const r1 = clampIndex(y - 1, p.h) * w;
+    const r2 = clampIndex(y, p.h) * w;
+    const r3 = clampIndex(y + 1, p.h) * w;
+    const r4 = clampIndex(y + 2, p.h) * w;
+    const out = yo * w;
+    for (let x = 0; x < w; x++) result[out + x] = K0 * tmp[r0 + x]! + K1 * tmp[r1 + x]! + K2 * tmp[r2 + x]! + K3 * tmp[r3 + x]! + K4 * tmp[r4 + x]!;
+  }
+  return { data: result, w, h };
 }
 
 /** 1-D weight, at each output position, of the source samples that actually exist (even positions inside the source). */
@@ -92,39 +103,49 @@ function expandWeights(n: number, sourceLength: number): Float32Array {
 
 /**
  * Upsamples by two to exactly `w` x `h`. Zero-inserts then smooths, dividing by the weight of the samples
- * that exist, so the borders are interpolated rather than darkened.
+ * that exist, so the borders are interpolated rather than darkened. Only the non-zero taps are visited: of the
+ * five, an even output position sees three source samples and an odd one sees two.
  */
 function expand(p: Plane, w: number, h: number): Plane {
-  const up = new Float32Array(w * h);
-  for (let y = 0; y < p.h; y++) for (let x = 0; x < p.w; x++) if (2 * x < w && 2 * y < h) up[2 * y * w + 2 * x] = p.data[y * p.w + x]!;
+  const evenRows = Math.ceil(h / 2);
+  const source = (xo: number, row: number): number => (xo >= 0 && xo < p.w ? p.data[row + xo]! : 0);
 
-  const tmp = new Float32Array(w * h);
-  for (let y = 0; y < h; y++) {
+  // Horizontal pass, for the rows that hold source samples.
+  const tmp = new Float32Array(evenRows * w);
+  for (let yo = 0; yo < Math.min(p.h, evenRows); yo++) {
+    const row = yo * p.w;
+    const out = yo * w;
     for (let x = 0; x < w; x++) {
-      let s = 0;
-      for (let k = 0; k < 5; k++) {
-        const i = x + k - 2;
-        if (i >= 0 && i < w) s += KERNEL[k]! * up[y * w + i]!;
+      if (x % 2 === 0) {
+        const xo = x / 2;
+        tmp[out + x] = K0 * (x - 2 >= 0 ? source(xo - 1, row) : 0) + K2 * source(xo, row) + K4 * (x + 2 < w ? source(xo + 1, row) : 0);
+      } else {
+        const xo = (x - 1) / 2;
+        tmp[out + x] = K1 * source(xo, row) + K3 * (x + 1 < w ? source(xo + 1, row) : 0);
       }
-      tmp[y * w + x] = s;
     }
   }
+
+  // Vertical pass. Row `r` of the zero-inserted image is zero unless it is even, so only those rows contribute.
   const wx = expandWeights(w, p.w);
   const wy = expandWeights(h, p.h);
   const out = new Float32Array(w * h);
+  const rowOf = (r: number): number => (r >= 0 && r < h ? (r / 2) * w : -1);
   for (let y = 0; y < h; y++) {
+    const a = y % 2 === 0 ? rowOf(y - 2) : rowOf(y - 1);
+    const b = y % 2 === 0 ? rowOf(y) : rowOf(y + 1);
+    const c = y % 2 === 0 ? rowOf(y + 2) : -1;
+    const ka = y % 2 === 0 ? K0 : K1;
+    const kb = y % 2 === 0 ? K2 : K3;
+    const kc = K4;
+    const base = y * w;
     for (let x = 0; x < w; x++) {
-      let s = 0;
-      for (let k = 0; k < 5; k++) {
-        const i = y + k - 2;
-        if (i >= 0 && i < h) s += KERNEL[k]! * tmp[i * w + x]!;
-      }
-      out[y * w + x] = wx[x]! * wy[y]! > 0 ? s / (wx[x]! * wy[y]!) : 0;
+      const s = (a >= 0 ? ka * tmp[a + x]! : 0) + (b >= 0 ? kb * tmp[b + x]! : 0) + (c >= 0 ? kc * tmp[c + x]! : 0);
+      out[base + x] = wx[x]! * wy[y]! > 0 ? s / (wx[x]! * wy[y]!) : 0;
     }
   }
   return { data: out, w, h };
 }
-
 function gaussianPyramid(p: Plane, levels: number): Plane[] {
   const pyramid = [p];
   for (let i = 0; i < levels; i++) pyramid.push(reduce(pyramid[i]!));
@@ -312,15 +333,34 @@ export function blendPair(first: Placed, second: Placed, options: BlendOptions):
   return result;
 }
 
+/** Block size of the cache-friendly transpose, in pixels. */
+const TRANSPOSE_BLOCK = 32;
+
 /** Swaps rows and columns, so a vertical blend can reuse the horizontal one. */
 export function transpose(placed: Placed): Placed {
   const { image } = placed;
+  const { width, height } = image;
   const out = Buffer.allocUnsafe(image.data.length);
-  for (let y = 0; y < image.height; y++) {
-    for (let x = 0; x < image.width; x++) {
-      const from = (y * image.width + x) * CHANNELS;
-      image.data.copy(out, (x * image.height + y) * CHANNELS, from, from + CHANNELS);
+
+  // A pixel is four bytes, so move it as one 32-bit word, in blocks that fit the cache.
+  const aligned = image.data.byteOffset % 4 === 0 && out.byteOffset % 4 === 0;
+  if (aligned) {
+    const src = new Uint32Array(image.data.buffer, image.data.byteOffset, width * height);
+    const dst = new Uint32Array(out.buffer, out.byteOffset, width * height);
+    for (let by = 0; by < height; by += TRANSPOSE_BLOCK) {
+      const yEnd = Math.min(height, by + TRANSPOSE_BLOCK);
+      for (let bx = 0; bx < width; bx += TRANSPOSE_BLOCK) {
+        const xEnd = Math.min(width, bx + TRANSPOSE_BLOCK);
+        for (let y = by; y < yEnd; y++) for (let x = bx; x < xEnd; x++) dst[x * height + y] = src[y * width + x]!;
+      }
+    }
+  } else {
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const from = (y * width + x) * CHANNELS;
+        image.data.copy(out, (x * height + y) * CHANNELS, from, from + CHANNELS);
+      }
     }
   }
-  return { image: { data: out, width: image.height, height: image.width }, x: placed.y, y: placed.x };
+  return { image: { data: out, width: height, height: width }, x: placed.y, y: placed.x };
 }

@@ -54,5 +54,23 @@ export function labToRgb8(l: number, a: number, b: number): [number, number, num
   ];
 }
 
+/** Linear light -> sRGB on a 0..255 scale, neither clamped nor rounded (so the mapping stays smooth). */
+function toSrgbFloat(linear: number): number {
+  const c = linear <= 0.0031308 ? 12.92 * linear : 1.055 * Math.pow(linear, 1 / 2.4) - 0.055;
+  return c * 255;
+}
+
+/** Lab -> sRGB on a 0..255 scale, neither clamped to the gamut nor rounded (for building smooth lookup tables). */
+export function labToRgbFloat(l: number, a: number, b: number): [number, number, number] {
+  const fy = (l + 16) / 116;
+  const x = XN * fInverse(fy + a / 500);
+  const y = fInverse(fy);
+  const z = ZN * fInverse(fy - b / 200);
+  return [
+    toSrgbFloat(3.2404542 * x - 1.5371385 * y - 0.4985314 * z),
+    toSrgbFloat(-0.969266 * x + 1.8760108 * y + 0.041556 * z),
+    toSrgbFloat(0.0556434 * x - 0.2040259 * y + 1.0572252 * z),
+  ];
+}
 /** CIE76 colour difference: Euclidean distance in Lab. A difference of about 2-3 is just noticeable side by side. */
 export const deltaE76 = (p: Lab, q: Lab): number => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
