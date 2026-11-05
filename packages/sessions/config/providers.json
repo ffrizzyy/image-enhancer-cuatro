@@ -2,7 +2,7 @@
   "gpt": {
     "loginUrl": "https://chatgpt.com/auth/login",
     "probes": {
-      "ready": ["#prompt-textarea"],
+      "ready": ["#prompt-textarea", "div.ProseMirror[contenteditable='true']"],
       "loggedOut": ["[data-testid='login-button']", "a[href*='/auth/login']"],
       "challenge": ["iframe[src*='challenges.cloudflare.com']", "#challenge-form"],
       "quota": []
@@ -28,7 +28,7 @@
   "grok": {
     "loginUrl": "https://grok.com/",
     "probes": {
-      "ready": ["textarea[aria-label*='Ask']", "div[contenteditable='true'][role='textbox']"],
+      "ready": [".tiptap.ProseMirror[contenteditable='true']", "textarea[aria-label*='Ask']"],
       "loggedOut": ["a[href*='/sign-in']", "button[data-testid='sign-in']"],
       "challenge": ["iframe[src*='challenges.cloudflare.com']", "#cf-challenge"],
       "quota": []

@@ -20,6 +20,10 @@ export { IDLE_SELECTOR_KEYS, ProviderConfigSchema, REQUIRED_SELECTOR_KEYS } from
 export type { MarkerKind, ProviderConfig, SelectorKey } from './config/schema';
 export { createGeminiAdapter } from './adapters/gemini';
 export type { GeminiAdapterDeps } from './adapters/gemini';
-export { geminiConfig, loadProviderConfig } from './config/load';
+export { createGptAdapter } from './adapters/gpt';
+export type { GptAdapterDeps } from './adapters/gpt';
+export { createGrokAdapter } from './adapters/grok';
+export type { GrokAdapterDeps } from './adapters/grok';
+export { geminiConfig, gptConfig, grokConfig, loadProviderConfig } from './config/load';
 export { DISCOVERY_SCRIPT } from './tools/discover';
 export type { DiscoveryReport } from './tools/discover';

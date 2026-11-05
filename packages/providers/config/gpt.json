@@ -1,0 +1,23 @@
+{
+  "_status": "VERIFIED on the live site (2026-11-05, 1 real generation, 42 s): promptInput, attachInput, attachmentThumb, submitButton, resultImage; one 768x512 attachment -> 1536x1024 (3:2). STILL UNVERIFIED: generatingIndicator (guess; the wait worked), markers, maxAttachments > 1, 1:1 and 2:3 outputs.",
+  "id": "gpt",
+  "urls": { "newChat": "https://chatgpt.com/" },
+  "healthKeys": ["promptInput"],
+  "selectors": {
+    "promptInput": ["div.ProseMirror[contenteditable='true']", "#prompt-textarea"],
+    "attachInput": ["input[type='file'][accept^='image']"],
+    "attachmentThumb": [".composer-attachment-surface img"],
+    "submitButton": ["button[aria-label='Send'][type='submit']", "button[data-testid='send-button']"],
+    "generatingIndicator": ["button[aria-label*='Stop' i]", "button[data-testid='stop-button']"],
+    "resultImage": ["img[alt*='Generated image' i]", "[data-testid*='image'] img", "article img[src*='backend-api']"]
+  },
+  "markers": {
+    "loggedOut": { "selectors": ["[data-testid='login-button']", "a[href*='/auth/login']"], "text": ["log in or sign up"] },
+    "challenge": { "selectors": ["iframe[src*='challenges.cloudflare.com']", "#challenge-form"], "text": ["verify you are human", "checking your browser"] },
+    "quota": { "selectors": [], "text": ["reached your limit", "usage cap", "too many requests", "come back later"] },
+    "refusal": { "selectors": [], "text": ["can't help with that", "can't create", "unable to generate", "violates our content"] }
+  },
+  "timeouts": { "navigationMs": 30000, "attachMs": 20000, "generationMs": 240000, "downloadMs": 30000 },
+  "capabilities": { "maxAttachments": 3, "outputAspects": ["1:1", "2:3", "3:2"], "approxOutputPx": 1536 },
+  "minOutputPx": 768
+}

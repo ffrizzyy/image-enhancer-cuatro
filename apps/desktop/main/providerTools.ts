@@ -6,6 +6,8 @@ import type { ProviderId } from '@ie/contracts';
 import { getCategory, buildPrompt } from '@ie/presets';
 import {
   createGeminiAdapter,
+  createGptAdapter,
+  createGrokAdapter,
   createImageSaver,
   DISCOVERY_SCRIPT,
   loadProviderConfig,
@@ -30,7 +32,7 @@ const IMAGE_SURVEY = `(() => {
   return { page: location.origin + location.pathname, images, busy };
 })()`;
 
-export type ToolCommand = 'discover' | 'health' | 'enhance' | 'download';
+export type ToolCommand = 'discover' | 'health' | 'enhance' | 'download' | 'markers';
 
 export interface ToolArgs {
   command: ToolCommand;
@@ -45,7 +47,7 @@ export interface ToolArgs {
   chat?: string;
 }
 
-const COMMANDS: readonly string[] = ['discover', 'health', 'enhance', 'download'];
+const COMMANDS: readonly string[] = ['discover', 'health', 'enhance', 'download', 'markers'];
 const PROVIDERS: readonly string[] = ['gpt', 'gemini', 'grok'];
 
 /** Parses `<command> <provider>` from the arguments after `--provider-tool`. */
@@ -131,9 +133,8 @@ function adapterFor(provider: ProviderId, session: OpenSession, outDir: string):
   const driver = new ElectronPageDriver(session.view.native);
   const saveImage = createImageSaver(outDir, `${provider}-result`);
   if (provider === 'gemini') return createGeminiAdapter({ driver, saveImage });
-  // Fails with a clear message for providers whose config is not shipped yet.
-  loadProviderConfig(provider);
-  throw new Error(`No adapter for ${provider} yet.`);
+  if (provider === 'gpt') return createGptAdapter({ driver, saveImage });
+  return createGrokAdapter({ driver, saveImage });
 }
 
 /**
@@ -199,6 +200,35 @@ export async function runProviderTool({ command, provider, type, open, attach, c
       writeFileSync(file, JSON.stringify(report, null, 2));
       log(`wrote ${file}`);
       return 0;
+    }
+
+    if (command === 'markers') {
+      // Read-only: which of OUR configured marker phrases/selectors the page matches (never any page text).
+      const config = loadProviderConfig(provider);
+      const driver = new ElectronPageDriver(session.view.native);
+      try {
+        if (chat) {
+          await driver.goto(chat, config.timeouts.navigationMs);
+          await sleep(3000);
+        }
+        const text = (await driver.pageText()).toLowerCase();
+        for (const [kind, marker] of Object.entries(config.markers)) {
+          const phrases = marker.text.filter((phrase) => text.includes(phrase.toLowerCase()));
+          const selectors: string[] = [];
+          for (const selector of marker.selectors) if ((await driver.count(selector)) > 0) selectors.push(selector);
+          log(`${kind}: phrases=${JSON.stringify(phrases)} selectors=${JSON.stringify(selectors)}`);
+          // With --draft as a switch-less opt-in for a test chat only: a short window around each matched phrase.
+          if (type === 'snippet') {
+            for (const phrase of phrases) {
+              const at = text.indexOf(phrase.toLowerCase());
+              log(`  "${phrase}" in: ...${text.slice(Math.max(0, at - 40), at + phrase.length + 40).replace(/\s+/g, ' ')}...`);
+            }
+          }
+        }
+        return 0;
+      } finally {
+        driver.dispose();
+      }
     }
 
     if (command === 'download') {
