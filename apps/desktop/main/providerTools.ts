@@ -30,7 +30,7 @@ const IMAGE_SURVEY = `(() => {
   return { page: location.origin + location.pathname, images, busy };
 })()`;
 
-export type ToolCommand = 'discover' | 'health' | 'enhance';
+export type ToolCommand = 'discover' | 'health' | 'enhance' | 'download';
 
 export interface ToolArgs {
   command: ToolCommand;
@@ -41,9 +41,11 @@ export interface ToolArgs {
   attach?: boolean;
   /** discover only: click this control first (e.g. an upload menu button), so its menu items can be listed. */
   open?: string;
+  /** download only: an existing conversation on the provider's own site, to fetch its result image from (no generation). */
+  chat?: string;
 }
 
-const COMMANDS: readonly string[] = ['discover', 'health', 'enhance'];
+const COMMANDS: readonly string[] = ['discover', 'health', 'enhance', 'download'];
 const PROVIDERS: readonly string[] = ['gpt', 'gemini', 'grok'];
 
 /** Parses `<command> <provider>` from the arguments after `--provider-tool`. */
@@ -61,10 +63,11 @@ export function parseToolArgs(argv: readonly string[]): ToolArgs | string {
       continue;
     }
     const value = rest[++i];
-    if ((flag !== '--draft' && flag !== '--open') || value === undefined) {
-      return `Unexpected argument "${flag ?? ''}": use --draft <text>, --open <selector> or --attach.`;
+    if ((flag !== '--draft' && flag !== '--open' && flag !== '--chat') || value === undefined) {
+      return `Unexpected argument "${flag ?? ''}": use --draft <text>, --open <selector>, --chat <url> or --attach.`;
     }
     if (flag === '--draft') args.type = value;
+    else if (flag === '--chat') args.chat = value;
     else args.open = value;
   }
   return args;
@@ -138,7 +141,7 @@ function adapterFor(provider: ProviderId, session: OpenSession, outDir: string):
  * only read the page. `enhance` performs ONE real generation on the account. Nothing here logs in, clears a
  * session, or reads credentials.
  */
-export async function runProviderTool({ command, provider, type, open, attach }: ToolArgs): Promise<number> {
+export async function runProviderTool({ command, provider, type, open, attach, chat }: ToolArgs): Promise<number> {
   const manager = createSessionManager({
     backend: createElectronBackend(),
     healthProbe: createHealthProbe(),
@@ -191,6 +194,31 @@ export async function runProviderTool({ command, provider, type, open, attach }:
       writeFileSync(file, JSON.stringify(report, null, 2));
       log(`wrote ${file}`);
       return 0;
+    }
+
+    if (command === 'download') {
+      // Read-only: open a conversation that already exists and fetch its result image, to test the download path.
+      const config = loadProviderConfig(provider);
+      if (!chat || new URL(chat).origin !== new URL(config.urls.newChat).origin) {
+        log(`download needs --chat <a conversation URL on ${new URL(config.urls.newChat).origin}>`);
+        return 1;
+      }
+      const driver = new ElectronPageDriver(session.view.native);
+      try {
+        await driver.goto(chat, config.timeouts.navigationMs);
+        const selector = config.selectors.resultImage.join(', ');
+        if (!(await driver.waitFor(selector, 30_000))) {
+          log(`no element matched the resultImage selectors: ${selector}`);
+          return 1;
+        }
+        await sleep(1500);
+        const bytes = await driver.fetchImage(selector, config.timeouts.downloadMs, { urlRewrites: config.download?.urlRewrites ?? [] });
+        const saved = await createImageSaver(outDir, `${provider}-download`)(bytes);
+        log(`downloaded ${saved.width}x${saved.height} (${bytes.length} bytes) -> ${saved.imagePath}`);
+        return 0;
+      } finally {
+        driver.dispose();
+      }
     }
 
     const adapter = adapterFor(provider, session, outDir);

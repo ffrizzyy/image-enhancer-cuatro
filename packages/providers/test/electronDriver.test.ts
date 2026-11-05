@@ -235,6 +235,33 @@ describe('fetchImage', () => {
     await expect(driverFor(contents).fetchImage('img.result', 2000)).rejects.toThrow(/HTTP 404/);
   });
 
+  it('reads a loaded image back from a canvas when it cannot be fetched (blob: URLs)', async () => {
+    const contents = new JsdomContents(page('<img class="result" src="blob:https://app.example.test/abc" />'));
+    withFetch(contents, async () => {
+      throw new TypeError('Failed to fetch');
+    });
+    const { window } = contents.dom;
+    const img = window.document.querySelector('img')!;
+    Object.defineProperty(img, 'complete', { value: true });
+    Object.defineProperty(img, 'naturalWidth', { value: 1024 });
+    Object.defineProperty(img, 'naturalHeight', { value: 683 });
+    const drawn: number[] = [];
+    window.HTMLCanvasElement.prototype.getContext = (() => ({ drawImage: () => drawn.push(1) })) as never;
+    window.HTMLCanvasElement.prototype.toDataURL = () => `data:image/png;base64,${Buffer.from(PNG).toString('base64')}`;
+
+    const bytes = await driverFor(contents).fetchImage('img.result', 2000);
+    expect([...bytes]).toEqual([...PNG]);
+    expect(drawn).toHaveLength(1);
+  });
+
+  it('still fails when the image cannot be fetched and has not loaded', async () => {
+    const contents = new JsdomContents(page('<img class="result" src="blob:https://app.example.test/abc" />'));
+    withFetch(contents, async () => {
+      throw new TypeError('Failed to fetch');
+    });
+    await expect(driverFor(contents).fetchImage('img.result', 2000)).rejects.toThrow(/download failed/);
+  });
+
   it('rejects when there is no image, no URL, or an empty body', async () => {
     const missing = new JsdomContents(page(''));
     await expect(driverFor(missing).fetchImage('img.result', 2000)).rejects.toThrow(/image element not found/);

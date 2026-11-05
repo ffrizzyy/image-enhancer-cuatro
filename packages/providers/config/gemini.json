@@ -1,5 +1,5 @@
 {
-  "_status": "PARTLY VERIFIED on the live site (2026-11-05): promptInput, beforeAttach, attachInput, submitButton. STILL UNVERIFIED: attachmentThumb, generatingIndicator, resultImage, markers, download rewrite. Update after the live smoke.",
+  "_status": "VERIFIED on the live site (2026-11-05, 2 real generations): promptInput, beforeAttach, attachInput, attachmentThumb (uploader-file-preview), submitButton, resultImage (single-image.generated-image img.image, a blob: URL, so the download reads it back via canvas), one 768x512 attachment -> 1024x683 (3:2) result. STILL UNVERIFIED: generatingIndicator (guess; the wait still worked), markers (quota/refusal/challenge/logged-out), maxAttachments > 1, 1:1 and 2:3 outputs, the =s0 rewrite (unused for blob URLs).",
   "id": "gemini",
   "urls": { "newChat": "https://gemini.google.com/app" },
   "beforeAttach": [["button[aria-label='Upload & tools']"]],
@@ -10,7 +10,7 @@
     "attachmentThumb": ["uploader-file-preview"],
     "submitButton": ["button[aria-label='Send message']", "gem-icon-button.send-button button"],
     "generatingIndicator": ["button[aria-label='Stop response']", "button.stop", "[aria-busy='true']"],
-    "resultImage": ["generated-image img", "single-image img", "img.image.loaded", "model-response img[src*='googleusercontent']"]
+    "resultImage": ["single-image.generated-image img.image", "single-image img.image", "generated-image img"]
   },
   "markers": {
     "loggedOut": {

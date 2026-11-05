@@ -190,7 +190,21 @@ export class ElectronPageDriver implements PageDriver {
       for (const credentials of ['omit', 'include']) {
         try { response = await fetch(url, { credentials }); if (response.ok) break; } catch (error) { response = undefined; }
       }
-      if (!response || !response.ok) throw new Error('download failed' + (response ? ' (HTTP ' + response.status + ')' : ''));
+      if (!response || !response.ok) {
+        // Some pages show blob: or otherwise unfetchable images (a CSP can block the fetch). A same-origin image
+        // can still be read back from a canvas at its natural size.
+        if (img.complete && img.naturalWidth > 0) {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            canvas.getContext('2d').drawImage(img, 0, 0);
+            const png = canvas.toDataURL('image/png').split(',')[1];
+            if (png) return png;
+          } catch (error) { /* tainted canvas: fall through to the error below */ }
+        }
+        throw new Error('download failed' + (response ? ' (HTTP ' + response.status + ')' : ''));
+      }
 
       const blob = await response.blob();
       const dataUrl = await new Promise((resolve, reject) => {
