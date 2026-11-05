@@ -38,6 +38,8 @@ export interface FakePageOptions {
   blockAt?: 'newChat' | 'generating';
   /** Extra elements present on the idle page (e.g. a renamed prompt box). */
   extra?: readonly string[];
+  /** The file input only appears after the page's menu button (`button.menu`) is clicked. */
+  attachBehindMenu?: boolean;
 }
 
 const IDLE = ['#prompt', 'input[type=file]', 'button.send'];
@@ -92,7 +94,8 @@ export class FakePage implements PageDriver {
     this.dom = new Map();
     this.text = 'Ask anything';
     this.polls = 0;
-    this.show(...IDLE, ...(this.o.extra ?? []));
+    if (this.o.attachBehindMenu) this.show(...IDLE.filter((s) => s !== 'input[type=file]'), 'button.menu', ...(this.o.extra ?? []));
+    else this.show(...IDLE, ...(this.o.extra ?? []));
     if (this.blocks && (this.o.blockAt ?? (this.o.scenario === 'logged-out' ? 'newChat' : 'generating')) === 'newChat') {
       this.applyBlock();
     }
@@ -141,6 +144,10 @@ export class FakePage implements PageDriver {
   async click(selector: string): Promise<void> {
     this.log.push(`click:${selector}`);
     this.seen.add(selector);
+    if (selector === 'button.menu') {
+      this.show('input[type=file]');
+      return;
+    }
     this.show('.spinner');
   }
 

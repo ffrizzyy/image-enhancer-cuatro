@@ -33,6 +33,7 @@ export function createElectronBackend(): SessionBackend {
 
       return {
         partition,
+        native: view.webContents,
         setVisible: (v) => (v ? win.show() : win.hide()),
         isVisible: () => win.isVisible(),
         loadURL: (url) => view.webContents.loadURL(url),

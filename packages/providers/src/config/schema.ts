@@ -43,6 +43,13 @@ export const ProviderConfigSchema = z.object({
     newChat: z.string().url(),
   }),
   selectors,
+  /**
+   * Controls to click, in order, before the attach input is looked up (for example a menu button that
+   * reveals the file input). Each entry is a list of ordered fallbacks for one control.
+   */
+  beforeAttach: z.array(selectorList).optional(),
+  /** Which selector keys `health()` checks on an idle page. Defaults to the keys every idle chat page shows. */
+  healthKeys: z.array(z.enum(REQUIRED_SELECTOR_KEYS)).min(1).optional(),
   markers: z.object({
     loggedOut: marker,
     challenge: marker,
@@ -63,6 +70,12 @@ export const ProviderConfigSchema = z.object({
   }),
   /** A download whose longest side is smaller than this is treated as a preview, not the real image. */
   minOutputPx: z.number().int().positive(),
+  /** How to turn the displayed image's URL into the original-resolution one (e.g. a CDN size parameter). */
+  download: z
+    .object({
+      urlRewrites: z.array(z.object({ pattern: z.string().min(1), replacement: z.string() })),
+    })
+    .optional(),
 });
 
 export type ProviderConfig = z.infer<typeof ProviderConfigSchema>;

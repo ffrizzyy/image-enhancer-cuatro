@@ -24,6 +24,7 @@ import { handlePresetsList, handlePresetsSuggest } from './ipc/presets.js';
 import { handleSessionsClear, handleSessionsOpen, handleSessionsStatus } from './ipc/sessions.js';
 import { handleSettingsGet, handleSettingsSet } from './ipc/settings.js';
 import { createAssetRegistry } from './assetRegistry.js';
+import { parseToolArgs, runProviderTool } from './providerTools.js';
 import { createSettingsStore } from './settingsStore.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -42,6 +43,9 @@ export const CSP = [
   "form-action 'none'",
   "frame-ancestors 'none'",
 ].join('; ');
+
+// The developer tools do not need the GPU, and a wedged GPU cache would otherwise stall the provider pages.
+if (process.argv.includes('--provider-tool')) app.disableHardwareAcceleration();
 
 let mainWindow: BrowserWindow | undefined;
 
@@ -191,6 +195,25 @@ app.on('window-all-closed', () => app.quit());
 // No top-level await: Electron defers `ready` until an ESM main module finishes evaluating.
 void app.whenReady().then(() => {
   applySecurity();
+
+  // Developer tools against the real provider sessions in this profile: no app window, no IPC.
+  if (process.argv.includes('--provider-tool')) {
+    const parsed = parseToolArgs(process.argv);
+    if (typeof parsed === 'string') {
+      console.log(`[provider-tool] ${parsed}`);
+      app.exit(64);
+      return;
+    }
+    void runProviderTool(parsed).then(
+      (code) => app.exit(code),
+      (error: unknown) => {
+        console.log(`[provider-tool] crashed: ${error instanceof Error ? error.message : String(error)}`);
+        app.exit(1);
+      },
+    );
+    return;
+  }
+
   registerIpc();
   mainWindow = createWindow();
 });

@@ -1,0 +1,37 @@
+{
+  "_status": "PARTLY VERIFIED on the live site (2026-11-05): promptInput, beforeAttach, attachInput, submitButton. STILL UNVERIFIED: attachmentThumb, generatingIndicator, resultImage, markers, download rewrite. Update after the live smoke.",
+  "id": "gemini",
+  "urls": { "newChat": "https://gemini.google.com/app" },
+  "beforeAttach": [["button[aria-label='Upload & tools']"]],
+  "healthKeys": ["promptInput"],
+  "selectors": {
+    "promptInput": [".ql-editor[contenteditable='true']", "div[role='textbox'][contenteditable='true']"],
+    "attachInput": ["input.hidden-file-input[accept^='image']", "gem-menu input.hidden-file-input"],
+    "attachmentThumb": ["uploader-file-preview"],
+    "submitButton": ["button[aria-label='Send message']", "gem-icon-button.send-button button"],
+    "generatingIndicator": ["button[aria-label='Stop response']", "button.stop", "[aria-busy='true']"],
+    "resultImage": ["generated-image img", "single-image img", "img.image.loaded", "model-response img[src*='googleusercontent']"]
+  },
+  "markers": {
+    "loggedOut": {
+      "selectors": ["a[href*='accounts.google.com/ServiceLogin']", "a[href*='accounts.google.com/signin']"],
+      "text": ["sign in to gemini"]
+    },
+    "challenge": {
+      "selectors": ["iframe[src*='recaptcha']", "#captcha-form"],
+      "text": ["unusual traffic", "verify it's you"]
+    },
+    "quota": {
+      "selectors": [],
+      "text": ["reached your limit", "come back tomorrow", "usage limit", "limit reached"]
+    },
+    "refusal": {
+      "selectors": [],
+      "text": ["can't help with that", "i can't generate", "unable to generate", "not able to create"]
+    }
+  },
+  "timeouts": { "navigationMs": 30000, "attachMs": 20000, "generationMs": 180000, "downloadMs": 30000 },
+  "capabilities": { "maxAttachments": 3, "outputAspects": ["1:1", "2:3", "3:2"], "approxOutputPx": 1024 },
+  "minOutputPx": 768,
+  "download": { "urlRewrites": [{ "pattern": "=s\\d+(-[a-z0-9-]*)?$", "replacement": "=s0" }] }
+}

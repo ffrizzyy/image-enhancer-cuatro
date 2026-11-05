@@ -49,12 +49,21 @@ export function classify(facts: Partial<PageFacts> | null | undefined): SessionS
   return 'unknown';
 }
 
-export function createHealthProbe(config: ProvidersConfig = providersConfig): HealthProbe {
+/** A page that has not answered by now (loading, crashed, or busy) is reported as unknown, never waited on. */
+export const PROBE_TIMEOUT_MS = 8000;
+
+export function createHealthProbe(config: ProvidersConfig = providersConfig, timeoutMs = PROBE_TIMEOUT_MS): HealthProbe {
   return async (provider: ProviderId, view) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
     try {
-      return classify(await view.evaluate<PageFacts>(factsScript(config[provider])));
+      const timedOut = new Promise<undefined>((resolve) => {
+        timer = setTimeout(() => resolve(undefined), timeoutMs);
+      });
+      return classify(await Promise.race([view.evaluate<PageFacts>(factsScript(config[provider])), timedOut]));
     } catch {
       return 'unknown';
+    } finally {
+      clearTimeout(timer);
     }
   };
 }

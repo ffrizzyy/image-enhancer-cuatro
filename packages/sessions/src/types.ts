@@ -9,6 +9,8 @@ export interface ProviderView {
   /** Run a read-only script in the page and return its (serializable) result. */
   evaluate<T>(script: string): Promise<T>;
   close(): void;
+  /** The underlying Electron `WebContents`, for drivers that need the DevTools protocol. Absent on test fakes. */
+  readonly native?: unknown;
 }
 
 /**

@@ -99,6 +99,17 @@ describe('config schema', () => {
     }
   });
 
+  it('validates the optional menu step and health keys', () => {
+    const withSteps = valid() as unknown as Record<string, unknown>;
+    withSteps.beforeAttach = [["button.menu"], ["a", "b"]];
+    withSteps.healthKeys = ['promptInput'];
+    expect(parses(withSteps)).toBe(true);
+
+    for (const bad of [{ beforeAttach: [[]] }, { beforeAttach: [['']] }, { healthKeys: [] }, { healthKeys: ['nope'] }]) {
+      expect(parses({ ...valid(), ...bad }), JSON.stringify(bad)).toBe(false);
+    }
+  });
+
   it('validates state markers: all four present, each with at least one selector or phrase', () => {
     for (const kind of ['loggedOut', 'challenge', 'quota', 'refusal']) {
       const missing = valid();

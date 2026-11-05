@@ -2,7 +2,7 @@ import type { EnhanceRequest, EnhanceResult, ProviderCapabilities, ProviderError
 
 import { ProviderError, type ProviderAdapter } from '../ProviderAdapter';
 import { IDLE_SELECTOR_KEYS, type MarkerKind, type ProviderConfig, type SelectorKey } from '../config/schema';
-import type { PageDriver } from './PageDriver';
+import { PageTimeoutError, type PageDriver } from './PageDriver';
 import type { ImageSaver } from './saveImage';
 
 export interface WebAdapterDeps {
@@ -77,7 +77,7 @@ export class WebAdapter implements ProviderAdapter {
       await this.driver.goto(this.config.urls.newChat, this.config.timeouts.navigationMs);
       const blocked = await this.classifyPage();
       const missingSelectors: string[] = [];
-      for (const key of IDLE_SELECTOR_KEYS) {
+      for (const key of this.config.healthKeys ?? IDLE_SELECTOR_KEYS) {
         if ((await this.firstMatch(key)) === null) missingSelectors.push(key);
       }
       return { ok: blocked === null && missingSelectors.length === 0, missingSelectors };
@@ -129,10 +129,43 @@ export class WebAdapter implements ProviderAdapter {
   private async openNewChat(deadline: number): Promise<void> {
     const timeout = Math.min(this.config.timeouts.navigationMs, this.remaining(deadline, 'opening a new chat'));
     await this.driver.goto(this.config.urls.newChat, timeout);
+    await this.waitForComposer(deadline);
     await this.throwIfBlocked();
   }
 
+  /**
+   * A single-page app renders its composer after the load event. Wait for it (or for a blocking state such
+   * as a login page) before looking up selectors, so a slow render is not mistaken for a changed UI.
+   */
+  private async waitForComposer(deadline: number): Promise<void> {
+    const composer = this.config.selectors.promptInput.join(', ');
+    const stop = Math.min(deadline, this.now() + this.config.timeouts.navigationMs);
+    while (this.now() < stop) {
+      if ((await this.driver.count(composer)) > 0 || (await this.classifyPage()) !== null) return;
+      await this.driver.waitFor(composer, Math.min(this.pollMs, Math.max(1, stop - this.now())));
+      if ((await this.driver.count(composer)) === 0) await this.sleep(POLL_PAUSE_MS);
+    }
+  }
+
   private async attach(req: EnhanceRequest, deadline: number): Promise<void> {
+    // Some chat UIs only create the file input after a menu is opened.
+    for (const [index, step] of (this.config.beforeAttach ?? []).entries()) {
+      const union = step.join(', ');
+      const wait = Math.min(this.config.timeouts.attachMs, this.remaining(deadline, 'opening the attach menu'));
+      await this.driver.waitFor(union, wait);
+      const target = await this.firstMatchOf(step);
+      if (target === null) {
+        throw new ProviderError('ui-changed', `${MESSAGES['ui-changed']} Missing selector: beforeAttach[${index}] (tried ${step.join(' | ')}).`, {
+          selector: `beforeAttach[${index}]`,
+        });
+      }
+      await this.driver.click(target);
+      await this.pause();
+    }
+    await this.driver.waitFor(
+      this.config.selectors.attachInput.join(', '),
+      Math.min(this.config.timeouts.attachMs, this.remaining(deadline, 'waiting for the attach control')),
+    );
     const input = await this.requireMatch('attachInput');
     await this.driver.setInputFiles(
       input,
@@ -194,7 +227,9 @@ export class WebAdapter implements ProviderAdapter {
 
     let bytes: Uint8Array;
     try {
-      bytes = await this.driver.fetchImage(selector, timeout);
+      bytes = await this.driver.fetchImage(selector, timeout, {
+        urlRewrites: this.config.download?.urlRewrites ?? [],
+      });
     } catch (error) {
       throw new ProviderError('download-failed', MESSAGES['download-failed'], { cause: error });
     }
@@ -215,12 +250,17 @@ export class WebAdapter implements ProviderAdapter {
     return saved;
   }
 
-  /** The first configured fallback for `key` that currently matches, or null. */
-  private async firstMatch(key: SelectorKey): Promise<string | null> {
-    for (const selector of this.config.selectors[key]) {
+  /** The first of these fallbacks that currently matches, or null. */
+  private async firstMatchOf(selectors: readonly string[]): Promise<string | null> {
+    for (const selector of selectors) {
       if ((await this.driver.count(selector)) > 0) return selector;
     }
     return null;
+  }
+
+  /** The first configured fallback for `key` that currently matches, or null. */
+  private firstMatch(key: SelectorKey): Promise<string | null> {
+    return this.firstMatchOf(this.config.selectors[key]);
   }
 
   private async requireMatch(key: SelectorKey): Promise<string> {
@@ -254,6 +294,7 @@ export class WebAdapter implements ProviderAdapter {
   /** Adapters never leak a plain Error: anything unexpected is reported as a page problem. */
   private toProviderError(error: unknown): Error {
     if (error instanceof ProviderError || error instanceof RangeError) return error;
+    if (error instanceof PageTimeoutError) return new ProviderError('timeout', `${MESSAGES.timeout} (${error.message})`, { cause: error });
     const detail = error instanceof Error ? error.message : String(error);
     return new ProviderError('ui-changed', `Unexpected error while driving the page: ${detail}`, { cause: error });
   }

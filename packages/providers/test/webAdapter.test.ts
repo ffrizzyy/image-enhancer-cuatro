@@ -348,3 +348,52 @@ describe('health', () => {
     expect(error.kind).toBe('ui-changed');
   });
 });
+
+describe('config features for menu-driven UIs', () => {
+  const withMenu = (): ProviderConfig => {
+    const config = testConfig();
+    config.beforeAttach = [['#no-such-menu', 'button.menu']];
+    return config;
+  };
+
+  it('clicks the beforeAttach controls, in order, before looking up the file input', async () => {
+    const { adapter, page } = setup({ config: withMenu(), page: { attachBehindMenu: true } });
+    await adapter.enhance(request());
+
+    const at = (prefix: string) => page.log.findIndex((l) => l.startsWith(prefix));
+    expect(at('click:button.menu')).toBeGreaterThan(-1);
+    expect(at('click:button.menu')).toBeLessThan(at('setFiles'));
+    expect(at('setFiles')).toBeLessThan(at('insert'));
+  });
+
+  it('fails clearly, naming the step, when a beforeAttach control is missing', async () => {
+    const config = testConfig();
+    config.beforeAttach = [['#no-such-menu']];
+    const error = await failure(setup({ config, page: { attachBehindMenu: true } }).adapter.enhance(request()));
+    expect(error).toMatchObject({ kind: 'ui-changed', selector: 'beforeAttach[0]' });
+    expect(error.message).toContain('#no-such-menu');
+  });
+
+  it('without the menu step, a file input hidden behind a menu is reported as the missing attachInput', async () => {
+    const error = await failure(setup({ page: { attachBehindMenu: true } }).adapter.enhance(request()));
+    expect(error).toMatchObject({ kind: 'ui-changed', selector: 'attachInput' });
+  });
+
+  it('health checks only the configured healthKeys, since a menu-hidden input is absent when idle', async () => {
+    const strict = setup({ page: { attachBehindMenu: true } });
+    expect(await strict.adapter.health()).toEqual({ ok: false, missingSelectors: ['attachInput'] });
+
+    const config = testConfig();
+    config.healthKeys = ['promptInput'];
+    const lenient = setup({ config, page: { attachBehindMenu: true } });
+    expect(await lenient.adapter.health()).toEqual({ ok: true, missingSelectors: [] });
+  });
+
+  it('times out as a PageTimeoutError from the driver and reports it as a timeout', async () => {
+    const { PageTimeoutError } = await import('../src');
+    const adapter = adapterFor(
+      staticDriver('Ask anything', ['#prompt'], { goto: async () => Promise.reject(new PageTimeoutError('loading', 5)) }),
+    );
+    expect((await failure(adapter.enhance(request()))).kind).toBe('timeout');
+  });
+});

@@ -101,4 +101,14 @@ describe('degradation', () => {
     expect(await probe('gpt', viewReturning(async () => null))).toBe('unknown');
     expect(await probe('gpt', viewReturning(async () => ({ ready: true })))).toBe('ready');
   });
-});
+
+  it('reports unknown, instead of waiting forever, when the page never answers', async () => {
+    const hanging = viewReturning(() => new Promise(() => {}));
+    const started = performance.now();
+    expect(await createHealthProbe(undefined, 30)('gpt', hanging)).toBe('unknown');
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+
+  it('still returns a real answer that arrives before the timeout', async () => {
+    expect(await createHealthProbe(undefined, 1000)('gpt', viewReturning(async () => ({ ready: true })))).toBe('ready');
+  });});
