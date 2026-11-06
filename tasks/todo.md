@@ -96,7 +96,7 @@ Parallel tracks: slicer (T14–T16), providers (T17–T19), stitcher (T20–T22)
 ### Checkpoint F — after T33–T36
 - [x] All adapters pass contract tests; Gemini/Grok live smokes pass
 - [x] E2E with injected captcha passes; a11y audit clean; packaged app runs and exports
-- [ ] All spec success criteria checked; release candidate approved (awaiting human sign-off)
+- [x] All spec success criteria checked; release candidate approved (human sign-off, 2026-11-06)
 
 ## Parallelization Summary
 

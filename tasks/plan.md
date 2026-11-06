@@ -1225,7 +1225,7 @@ the packaged build.
 - [x] Accessibility audit is clean; keyboard-only flow works.
 - [x] Packaged app runs a fake job and exports.
 - [x] Every spec success criterion is checked off (see matrix below).
-- [ ] **Final review with human; release candidate approved.**
+- [x] **Final review with human; release candidate approved.**
 
 ## Spec Coverage Matrix
 
