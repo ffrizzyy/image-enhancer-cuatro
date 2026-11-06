@@ -50,8 +50,8 @@ Parallel tracks: slicer (T14–T16), providers (T17–T19), stitcher (T20–T22)
 - [x] **T15** Slicer: tile extraction and round-trip proof — deps: T14
 - [x] **T16** Setup: grid overlay and plan preview — deps: T14, T13
 - [x] **T17** Providers: interface, config schema, WebAdapter skeleton, fake adapter — deps: T2
-- [ ] **T18** GPT: config, fixtures, health, contract tests — deps: T17
-- [ ] **T19** GPT: enhance path and live smoke — deps: T18, T8  **[RISK GATE]**
+- [x] **T18** GPT: config, fixtures, health, contract tests — deps: T17 (states are simulated pages built from the config, in `test/support/chatPageSim.ts`; only the idle/attach/send/result structure was verified live)
+- [x] **T19** GPT: enhance path and live smoke — deps: T18, T8  **[RISK GATE]** (live smoke passed 2026-11-05: 768x512 in, 1536x1024 out)
 - [x] **T20** Stitcher: normalize and align — deps: T15
 - [x] **T21** Stitcher: color matching and blending — deps: T20
 - [x] **T22** Stitcher: harmonization, metrics, performance gate — deps: T21
