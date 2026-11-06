@@ -305,6 +305,7 @@ export function createJobService(deps: JobServiceDeps): JobService {
       if (tile.state !== 'needs-review') throw new JobServiceError('illegal', `Only a tile that needs review can be accepted as it is; this one is ${tile.state}.`);
       if (!tile.outputPath) throw new JobServiceError('illegal', 'This tile has no picture to keep. Try it again instead.');
       guard(() => applyTileEvent(store, jobId, index, { type: 'ACCEPT_AS_IS' }));
+      store.addEvent(jobId, 'warn', `Tile ${index + 1}: accepted as it is, without passing the quality check.`);
       return progressOf(jobId);
     },
 

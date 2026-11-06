@@ -177,6 +177,23 @@ describe('review: a tile the provider could not get right', () => {
     expect(h.store.getTile('J1', 2)!.attempts).toBeGreaterThan(3); // its history is kept
   });
 
+  it('records that Accept as is skipped the quality check, and a re-run leaves the other tiles untouched', async () => {
+    const h = harness({ bad: [1] });
+    h.service.register(job());
+    await h.service.start('J1');
+    await settle(h);
+    const before = h.service.get('J1').tiles.map((t) => ({ state: t.state, outputPath: t.outputPath }));
+
+    h.service.acceptTile('J1', 1);
+    expect(h.store.listEvents('J1').some((e) => /Tile 2: accepted as it is, without passing the quality check/.test(e.message))).toBe(true);
+
+    h.bad.clear();
+    await h.service.rerunTile('J1', 1);
+    await settle(h);
+    const after = h.service.get('J1').tiles;
+    for (const i of [0, 2, 3]) expect({ state: after[i]!.state, outputPath: after[i]!.outputPath }).toEqual(before[i]);
+  });
+
   it('can be tried again repeatedly and still be accepted as is at the end', async () => {
     const h = harness({ bad: [0] });
     h.service.register(job());

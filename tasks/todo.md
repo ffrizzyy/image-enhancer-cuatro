@@ -79,7 +79,7 @@ Parallel tracks: slicer (T14–T16), providers (T17–T19), stitcher (T20–T22)
 
 - [x] **T29** Result screen: compare, zoom, seam overlay, quality badge — deps: T22, T4
 - [x] **T30** Export (PNG/JPEG/WebP, correct dimensions) — deps: T22, T29
-- [ ] **T31** Per-tile actions: backend — deps: T25, T24
+- [x] **T31** Per-tile actions: backend — deps: T25, T24 (a re-run restitches the whole picture; partial-region restitch not implemented)
 - [x] **T32** Per-tile actions: Result UI — deps: T31, T29
 
 ### Checkpoint E — after T29–T32
