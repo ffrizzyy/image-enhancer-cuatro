@@ -1,12 +1,13 @@
 {
-  "_status": "PARTLY VERIFIED on the live site (2026-11-05): promptInput, attachInput, attachmentThumb, submitButton, and the quota marker (the real message is 'You've used your image generations. Please try again later.'). The account hit its image limit on the first generation, so UNVERIFIED: generatingIndicator, resultImage, download, output size, capabilities, other markers. Re-run `enhance grok` when the limit resets.",
+  "_status": "PARTLY VERIFIED on the live site. 2026-11-05: promptInput, attachInput, submitButton, and the quota marker (the real message is 'You've used your image generations. Please try again later.'). 2026-11-06 (read-only discovery): the composer's file input is single-file, so attachMode=one-by-one is required for 2+ images; the attachment list is [aria-label*='Conversation attachments' i] [role='listitem'] (two attachments confirmed). STILL UNVERIFIED: generatingIndicator, resultImage, download, output size, capabilities, other markers. Re-run `enhance grok` when the limit resets.",
   "id": "grok",
   "urls": { "newChat": "https://grok.com/" },
+  "attachMode": "one-by-one",
   "healthKeys": ["promptInput"],
   "selectors": {
     "promptInput": [".tiptap.ProseMirror[contenteditable='true']", "div[contenteditable='true'][role='combobox']"],
     "attachInput": ["form input[type='file']"],
-    "attachmentThumb": ["div.aspect-square img.object-cover[src*='assets.grok.com']"],
+    "attachmentThumb": ["[aria-label*='Conversation attachments' i] [role='listitem']", "form [role='listitem']"],
     "submitButton": ["button[data-testid='chat-submit']", "button[type='submit'][aria-label='Submit']"],
     "generatingIndicator": ["button[aria-label*='Stop' i]", "button[data-testid='stop-button']"],
     "resultImage": ["img[alt*='Generated' i]", "[data-testid*='image'] img", ".message-bubble img"]

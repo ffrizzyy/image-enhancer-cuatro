@@ -48,6 +48,12 @@ export const ProviderConfigSchema = z.object({
    * reveals the file input). Each entry is a list of ordered fallbacks for one control.
    */
   beforeAttach: z.array(selectorList).optional(),
+  /**
+   * How several attachments are added. `batch` (the default) sets them all on the file input at once. Some
+   * chat pages (ChatGPT, Grok) expose a single-file input, so a batch registers only its first file; those
+   * providers set `one-by-one`, and the adapter adds each file and waits for its preview before the next.
+   */
+  attachMode: z.enum(['batch', 'one-by-one']).optional(),
   /** Which selector keys `health()` checks on an idle page. Defaults to the keys every idle chat page shows. */
   healthKeys: z.array(z.enum(REQUIRED_SELECTOR_KEYS)).min(1).optional(),
   markers: z.object({

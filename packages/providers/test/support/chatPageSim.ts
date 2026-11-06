@@ -49,7 +49,11 @@ export class ChatPageSim extends JsdomContents {
   }
 
   protected override didSetFiles(files: string[]): void {
-    for (let i = 0; i < files.length; i++) {
+    // The live ChatGPT and Grok composers use a single-file input: setting several files at once registers only
+    // the first. Model that, so a batch attach fails here exactly as it does on the real page.
+    const input = this.dom.window.document.querySelector('input[type=file]');
+    const accepted = input?.hasAttribute('multiple') ? files : files.slice(0, 1);
+    for (let i = 0; i < accepted.length; i++) {
       this.attachedCount++;
       this.append(this.spec.attached);
     }
@@ -84,7 +88,7 @@ const page = (body: string): string => `<!doctype html><html><body>${body}</body
 
 /** GPT: structure from config/gpt.json (the first four selectors were verified live; the outcome states were not). */
 export const GPT_SPEC: ChatPageSpec = {
-  idle: page(`<form><div class="ProseMirror" contenteditable="true" id="prompt-textarea"><p><br></p></div><input type="file" accept="image/*" multiple></form>`),
+  idle: page(`<form><div class="ProseMirror" contenteditable="true" id="prompt-textarea"><p><br></p></div><input type="file" accept="image/*"></form>`),
   loggedOut: page(`<a href="/auth/login" data-testid="login-button">Log in</a><p>Log in or sign up</p>`),
   attached: `<div class="composer-attachment-surface"><img src="blob:https://chatgpt.example/a"></div>`,
   send: `<button type="submit" aria-label="Send" data-testid="send-button"></button>`,
@@ -99,9 +103,9 @@ export const GPT_SPEC: ChatPageSpec = {
 
 /** Grok: structure from config/grok.json (input, attach, submit and the quota text were verified live; the rest was not). */
 export const GROK_SPEC: ChatPageSpec = {
-  idle: page(`<form><div class="tiptap ProseMirror" contenteditable="true"><p><br></p></div><input type="file" accept="image/*" multiple></form>`),
+  idle: page(`<form><div class="tiptap ProseMirror" contenteditable="true"><p><br></p></div><input type="file" name="files"></form>`),
   loggedOut: page(`<a href="/sign-in">Sign in</a>`),
-  attached: `<div class="aspect-square"><img class="object-cover" src="https://assets.grok.com/users/a"></div>`,
+  attached: `<div role="list" aria-label="Conversation attachments"><div role="listitem"></div></div>`,
   send: `<button type="submit" data-testid="chat-submit" aria-label="Submit"></button>`,
   sendSelector: "button[data-testid='chat-submit']",
   generating: `<button aria-label="Stop model response" data-testid="stop-button"></button>`,

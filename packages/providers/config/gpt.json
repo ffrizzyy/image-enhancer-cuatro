@@ -1,7 +1,8 @@
 {
-  "_status": "VERIFIED on the live site (2026-11-05, 1 real generation, 42 s): promptInput, attachInput, attachmentThumb, submitButton, resultImage; one 768x512 attachment -> 1536x1024 (3:2). STILL UNVERIFIED: generatingIndicator (guess; the wait worked), markers, maxAttachments > 1, 1:1 and 2:3 outputs.",
+  "_status": "VERIFIED on the live site (2026-11-05, 1 real generation, 42 s): promptInput, attachInput, attachmentThumb, submitButton, resultImage; one 768x512 attachment -> 1536x1024 (3:2). 2026-11-06 (read-only discovery): the composer is a single-file input, so attachMode=one-by-one is required for 2+ images (two attachments confirmed). STILL UNVERIFIED: generatingIndicator (guess; the wait worked), markers, maxAttachments > 1, 1:1 and 2:3 outputs.",
   "id": "gpt",
   "urls": { "newChat": "https://chatgpt.com/" },
+  "attachMode": "one-by-one",
   "healthKeys": ["promptInput"],
   "selectors": {
     "promptInput": ["div.ProseMirror[contenteditable='true']", "#prompt-textarea"],

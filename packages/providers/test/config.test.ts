@@ -110,6 +110,12 @@ describe('config schema', () => {
     }
   });
 
+  it('validates the optional attach mode', () => {
+    expect(parses({ ...valid(), attachMode: 'batch' })).toBe(true);
+    expect(parses({ ...valid(), attachMode: 'one-by-one' })).toBe(true);
+    expect(parses({ ...valid(), attachMode: 'one-by-2' })).toBe(false);
+  });
+
   it('validates state markers: all four present, each with at least one selector or phrase', () => {
     for (const kind of ['loggedOut', 'challenge', 'quota', 'refusal']) {
       const missing = valid();

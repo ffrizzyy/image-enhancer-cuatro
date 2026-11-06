@@ -41,6 +41,8 @@ export interface ToolArgs {
   type?: string;
   /** discover only: run the configured menu and attach steps with a synthetic test image (still never sent). */
   attach?: boolean;
+  /** discover only: how many synthetic images to attach (default 1). */
+  attachCount?: number;
   /** discover only: click this control first (e.g. an upload menu button), so its menu items can be listed. */
   open?: string;
   /** download only: an existing conversation on the provider's own site, to fetch its result image from (no generation). */
@@ -54,7 +56,7 @@ const PROVIDERS: readonly string[] = ['gpt', 'gemini', 'grok'];
 export function parseToolArgs(argv: readonly string[]): ToolArgs | string {
   const at = argv.indexOf('--provider-tool');
   const [command, provider, ...rest] = at >= 0 ? argv.slice(at + 1) : [];
-  if (!command || !COMMANDS.includes(command)) return `Usage: --provider-tool <${COMMANDS.join('|')}> <${PROVIDERS.join('|')}> [--draft <text>] [--open <selector>]`;
+  if (!command || !COMMANDS.includes(command)) return `Usage: --provider-tool <${COMMANDS.join('|')}> <${PROVIDERS.join('|')}> [--draft <text>] [--open <selector>] [--attach] [--attach-count <n>]`;
   if (!provider || !PROVIDERS.includes(provider)) return `Unknown provider "${provider ?? ''}". Use one of: ${PROVIDERS.join(', ')}.`;
 
   const args: ToolArgs = { command: command as ToolCommand, provider: provider as ProviderId };
@@ -65,12 +67,16 @@ export function parseToolArgs(argv: readonly string[]): ToolArgs | string {
       continue;
     }
     const value = rest[++i];
-    if ((flag !== '--draft' && flag !== '--open' && flag !== '--chat') || value === undefined) {
-      return `Unexpected argument "${flag ?? ''}": use --draft <text>, --open <selector>, --chat <url> or --attach.`;
+    if ((flag !== '--draft' && flag !== '--open' && flag !== '--chat' && flag !== '--attach-count') || value === undefined) {
+      return `Unexpected argument "${flag ?? ''}": use --draft <text>, --open <selector>, --chat <url>, --attach-count <n> or --attach.`;
     }
     if (flag === '--draft') args.type = value;
     else if (flag === '--chat') args.chat = value;
-    else args.open = value;
+    else if (flag === '--attach-count') {
+      const count = Number(value);
+      if (!Number.isInteger(count) || count < 1 || count > 10) return '--attach-count must be a whole number from 1 to 10.';
+      args.attachCount = count;
+    } else args.open = value;
   }
   return args;
 }
@@ -142,7 +148,7 @@ function adapterFor(provider: ProviderId, session: OpenSession, outDir: string):
  * only read the page. `enhance` performs ONE real generation on the account. Nothing here logs in, clears a
  * session, or reads credentials.
  */
-export async function runProviderTool({ command, provider, type, open, attach, chat }: ToolArgs): Promise<number> {
+export async function runProviderTool({ command, provider, type, open, attach, attachCount, chat }: ToolArgs): Promise<number> {
   const manager = createSessionManager({
     backend: createElectronBackend(),
     healthProbe: createHealthProbe(),
@@ -180,19 +186,26 @@ export async function runProviderTool({ command, provider, type, open, attach, c
         await sleep(1200);
       }
       if (attach) {
-        // The adapter's own attach steps, from the shipped config, with a throwaway synthetic image.
+        // The adapter's own attach steps, from the shipped config, with throwaway synthetic images.
         const config = loadProviderConfig(provider);
-        const tile = path.join(outDir, 'smoke-tile.png');
-        await makeTestImage(tile);
+        const tiles: string[] = [];
+        for (let i = 1; i <= (attachCount ?? 1); i++) {
+          const tile = path.join(outDir, `smoke-tile-${i}.png`);
+          await makeTestImage(tile);
+          tiles.push(tile);
+        }
         for (const step of config.beforeAttach ?? []) {
           log(`clicking ${step[0]}`);
           await driver.click(step[0] ?? '');
           await sleep(1200);
         }
         const input = config.selectors.attachInput[0] ?? '';
-        log(`attaching a test image to ${input} (it will NOT be sent)`);
-        await driver.setInputFiles(input, [tile]);
-        await sleep(4000);
+        log(`attaching ${tiles.length} test image(s) to ${input}, one at a time (they will NOT be sent)`);
+        for (const tile of tiles) {
+          await driver.setInputFiles(input, [tile]);
+          await sleep(2500);
+        }
+        await sleep(2000);
       }
       const report = await session.view.evaluate(DISCOVERY_SCRIPT);
       driver.dispose();

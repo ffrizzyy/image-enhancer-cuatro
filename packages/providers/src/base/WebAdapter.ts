@@ -87,6 +87,9 @@ export class WebAdapter implements ProviderAdapter {
   async health(): Promise<ProviderHealth> {
     try {
       await this.driver.goto(this.config.urls.newChat, this.config.timeouts.navigationMs);
+      // A single-page app renders its composer after the load event; without this wait a healthy page is reported as
+      // changed (GPT and Grok both render late, especially behind a login redirect).
+      await this.waitForComposer(this.now() + this.config.timeouts.navigationMs);
       const blocked = await this.classifyPage();
       const missingSelectors: string[] = [];
       for (const key of this.config.healthKeys ?? IDLE_SELECTOR_KEYS) {
@@ -210,22 +213,42 @@ export class WebAdapter implements ProviderAdapter {
       Math.min(this.config.timeouts.attachMs, this.remaining(deadline, 'waiting for the attach control')),
     );
     const input = await this.requireMatch('attachInput');
-    await this.driver.setInputFiles(
-      input,
-      req.attachments.map((a) => a.path),
-    );
 
     // Verify every thumbnail appeared before going on; a silent attach failure would send an empty prompt. A reused
     // chat may still show the previous message's attachments, so only the ones beyond that baseline count.
     const thumbs = this.config.selectors.attachmentThumb.join(', ');
-    const expected = baselineThumbnails + req.attachments.length;
+    const paths = req.attachments.map((a) => a.path);
+    if (this.config.attachMode === 'one-by-one') {
+      // A single-file input drops every file after the first from one batch, so add them one at a time and let the
+      // page register each preview before the next. This is also how a person attaches several pictures.
+      for (const [index, filePath] of paths.entries()) {
+        await this.driver.setInputFiles(input, [filePath]);
+        await this.waitForAttachments(thumbs, baselineThumbnails, index + 1, paths.length, deadline);
+        if (index < paths.length - 1) await this.pause();
+      }
+    } else {
+      await this.driver.setInputFiles(input, paths);
+      await this.waitForAttachments(thumbs, baselineThumbnails, paths.length, paths.length, deadline);
+    }
+  }
+
+  /** Waits until `added` new attachment previews exist beyond `baseline`, or fails naming the missing selector. */
+  private async waitForAttachments(
+    thumbs: string,
+    baseline: number,
+    added: number,
+    total: number,
+    deadline: number,
+  ): Promise<void> {
+    const expected = baseline + added;
     const waitMs = Math.min(this.config.timeouts.attachMs, this.remaining(deadline, 'attaching files'));
     const stop = this.now() + waitMs;
     while ((await this.driver.count(thumbs)) < expected) {
       if (this.now() >= stop) {
+        const shown = Math.max(0, (await this.driver.count(thumbs)) - baseline);
         throw new ProviderError(
           'ui-changed',
-          `Only ${Math.max(0, (await this.driver.count(thumbs)) - baselineThumbnails)} of ${req.attachments.length} attachments appeared.`,
+          `Only ${shown} of ${total} attachments appeared.`,
           { selector: 'attachmentThumb' },
         );
       }
