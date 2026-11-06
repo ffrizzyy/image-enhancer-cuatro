@@ -17,7 +17,8 @@
     "validate-catalog": "node scripts/validate-catalog.mjs"
   },
   "dependencies": {
-    "@ie/contracts": "workspace:*"
+    "@ie/contracts": "workspace:*",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^3.2.0",

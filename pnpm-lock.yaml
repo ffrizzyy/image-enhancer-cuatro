@@ -365,6 +365,9 @@ importers:
       '@ie/contracts':
         specifier: workspace:*
         version: link:../contracts
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
     devDependencies:
       '@vitest/coverage-v8':
         specifier: ^3.2.0

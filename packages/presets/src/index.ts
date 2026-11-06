@@ -1,5 +1,6 @@
 ﻿import { CategorySchema, type Category } from '@ie/contracts';
 
+import { applyOverride, OverrideError, resetOverride, saveOverride, type CategoryOverride } from './overrides';
 import auto from './catalog/auto.json';
 import architectureInterior from './catalog/architecture-interior.json';
 import charRealistic from './catalog/char-realistic.json';
@@ -46,15 +47,39 @@ const CATALOG: readonly Category[] = [
   custom,
 ].map((entry) => CategorySchema.parse(entry));
 
+/** Categories as the app uses them: the shipped catalog with the person's overrides (template, default prompt) applied. */
 export function listCategories(): Category[] {
-  return CATALOG.map((category) => structuredClone(category));
+  return CATALOG.map((category) => structuredClone(applyOverride(category)));
 }
 
 export function getCategory(id: string): Category | undefined {
   const found = CATALOG.find((category) => category.id === id);
+  return found ? structuredClone(applyOverride(found)) : undefined;
+}
+
+/** The category exactly as shipped, ignoring any override (for the editor's "reset" view). */
+export function getShippedCategory(id: string): Category | undefined {
+  const found = CATALOG.find((category) => category.id === id);
   return found ? structuredClone(found) : undefined;
 }
 
+/** Saves an override for a category, validated first. Throws `OverrideError` with a plain message. */
+export function saveCategoryOverride(id: string, patch: CategoryOverride): Category {
+  const shipped = getShippedCategory(id);
+  if (!shipped) throw new OverrideError('That category does not exist.');
+  return saveOverride(shipped, patch);
+}
+
+/** Removes the override and returns the shipped category. */
+export function resetCategoryOverride(id: string): Category {
+  const shipped = getShippedCategory(id);
+  if (!shipped) throw new OverrideError('That category does not exist.');
+  resetOverride(id);
+  return shipped;
+}
+
+export { configureOverrides, listOverriddenIds, OverrideError } from './overrides';
+export type { CategoryOverride } from './overrides';
 export { AutoCategoryError, buildPrompt, describeTile, FIDELITY_CLAUSES, PLACEHOLDERS, validateTemplate } from './buildPrompt';
 export type { TileInfo, TilePrompt } from './buildPrompt';
 export { suggestCategory, SUGGESTION_THRESHOLD } from './suggestCategory';
