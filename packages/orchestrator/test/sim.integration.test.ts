@@ -49,7 +49,8 @@ describe('a simulated 8-tile job with 20% injected failures (the plan\'s accepta
     expect(result.tiles.every((t) => t.state === 'accepted')).toBe(true);
     expect(result.providerCalls).toBeGreaterThanOrEqual(8);
     const meta = await sharp(result.stitched!.imagePath).metadata();
-    expect([meta.width, meta.height]).toEqual([1600, 800]); // 4 x 2 tiles of 400 px
+    // The fake provider returns every tile at twice its sent size, and the stitcher keeps that detail: 2x of 1600 x 800.
+    expect([meta.width, meta.height]).toEqual([3200, 1600]);
     expect(result.stitched!.metrics.seamScore).toBeLessThanOrEqual(1.2);
   });
 

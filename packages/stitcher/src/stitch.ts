@@ -1,8 +1,8 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 
-import type { StitchInput, StitchResult } from '@ie/contracts';
-import { loadRgba } from '@ie/slicer';
+import type { Rect, StitchInput, StitchResult, TilePlan } from '@ie/contracts';
+import { loadRgba, type Rgba } from '@ie/slicer';
 import sharp from 'sharp';
 
 import { alignTiles } from './align';
@@ -27,6 +27,53 @@ export interface StitchReport extends StitchResult {
   timingsMs: { load: number; align: number; compose: number; harmonize: number; metrics: number; write: number; total: number };
 }
 
+
+/** The finished picture is never allowed past this many pixels, however large the provider tiles are. */
+const MAX_OUTPUT_PIXELS = 72_000_000;
+const MAX_SCALE = 4;
+
+const scaleRect = (r: Rect, s: number): Rect => ({ x: r.x * s, y: r.y * s, width: r.width * s, height: r.height * s });
+
+/** Multiplies every length in the plan by `s`, so tiles that came back larger than they were sent keep their extra detail. */
+function scalePlan(plan: TilePlan, s: number): TilePlan {
+  if (s === 1) return plan;
+  return {
+    ...plan,
+    source: { width: plan.source.width * s, height: plan.source.height * s },
+    overlapPx: plan.overlapPx * s,
+    tiles: plan.tiles.map((t) => ({ ...t, core: scaleRect(t.core, s), crop: scaleRect(t.crop, s), send: scaleRect(t.send, s) })),
+  };
+}
+
+/**
+ * How many times larger than the source the result should be: the whole-number size ratio at which providers actually
+ * returned their tiles (typically 1 for large pictures, 2+ for small ones). Downscaling those tiles back to the
+ * source size is what threw their detail away.
+ */
+async function chooseScale(plan: TilePlan, outputs: StitchInput['tiles']): Promise<number> {
+  const ratios: number[] = [];
+  for (const tile of plan.tiles) {
+    const output = outputs.find((o) => o.index === tile.index);
+    if (!output) continue;
+    const meta = await sharp(output.path).metadata();
+    if (meta.width && meta.height) ratios.push(Math.min(meta.width / tile.send.width, meta.height / tile.send.height));
+  }
+  if (ratios.length === 0) return 1;
+  ratios.sort((a, b) => a - b);
+  let scale = Math.min(MAX_SCALE, Math.max(1, Math.round(ratios[Math.floor(ratios.length / 2)]!)));
+  while (scale > 1 && plan.source.width * plan.source.height * scale * scale > MAX_OUTPUT_PIXELS) scale--;
+  return scale;
+}
+
+async function upscaleImage(image: Rgba, s: number): Promise<Rgba> {
+  if (s === 1) return image;
+  const { data, info } = await sharp(image.data, { raw: { width: image.width, height: image.height, channels: 4 } })
+    .resize(image.width * s, image.height * s, { fit: 'fill', kernel: 'lanczos3' })
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  return { data, width: info.width, height: info.height };
+}
+
 /**
  * The whole pipeline: normalise and align each provider output, match colours, blend, harmonize, score, and
  * write one PNG at the source size. Tiles that need review are reported, never dropped.
@@ -34,15 +81,20 @@ export interface StitchReport extends StitchResult {
 export async function stitch(input: StitchInput, io: StitchIo): Promise<StitchReport> {
   const clock = (): number => performance.now();
   const t0 = clock();
-  const { plan, options } = input;
+  const { options } = input;
 
-  const source = await loadRgba(io.sourcePath);
-  if (source.width !== plan.source.width || source.height !== plan.source.height) {
-    throw new RangeError(`The source is ${source.width}x${source.height}, but the plan was made for ${plan.source.width}x${plan.source.height}.`);
+  const originalSource = await loadRgba(io.sourcePath);
+  if (originalSource.width !== input.plan.source.width || originalSource.height !== input.plan.source.height) {
+    throw new RangeError(
+      `The source is ${originalSource.width}x${originalSource.height}, but the plan was made for ${input.plan.source.width}x${input.plan.source.height}.`,
+    );
   }
+  const scale = await chooseScale(input.plan, input.tiles);
+  const plan = scalePlan(input.plan, scale);
+  const source = await upscaleImage(originalSource, scale);
   const t1 = clock();
 
-  const aligned = await alignTiles({ plan, source, outputs: input.tiles, maxShiftPx: options.maxShiftPx });
+  const aligned = await alignTiles({ plan, source, outputs: input.tiles, maxShiftPx: options.maxShiftPx * scale });
   const t2 = clock();
 
   const flagged = new Set(aligned.flagged);

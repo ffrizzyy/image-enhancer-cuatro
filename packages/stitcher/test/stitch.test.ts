@@ -154,4 +154,21 @@ describe('stitch', () => {
     expect(timingsMs.total).toBeGreaterThan(0);
     expect(timingsMs.total).toBeGreaterThanOrEqual(timingsMs.align + timingsMs.compose);
   });
+
+  it('keeps the extra detail when providers return tiles twice as large as they were sent', { timeout: 120_000 }, async () => {
+    const job = await makeJob(300, 200, { rows: 2, cols: 2 });
+    const sharp = (await import('sharp')).default;
+    for (const t of job.tiles) {
+      const img = await loadRgba(t.path);
+      await sharp(img.data, { raw: { width: img.width, height: img.height, channels: 4 } })
+        .resize(img.width * 2, img.height * 2, { kernel: 'lanczos3' })
+        .png()
+        .toFile(t.path + '.2x.png');
+      t.path = t.path + '.2x.png';
+    }
+    const result = await run(job);
+    const meta = await sharp(result.imagePath).metadata();
+    expect(meta.width).toBe(600);
+    expect(meta.height).toBe(400);
+  });
 });

@@ -257,7 +257,7 @@ describe('per-tile overrides and the Result screen', () => {
     await h.service.start('J1');
     await settle(h);
     const result = await h.service.result('J1', 512);
-    expect(result).toMatchObject({ jobId: 'J1', width: 800, height: 400 });
+    expect(result).toMatchObject({ jobId: 'J1', width: 1600, height: 800 });
     expect(result.plan.tiles).toHaveLength(4);
     expect(result.preview.dataUrl).toMatch(/^data:image\/jpeg;base64,/);
     expect(result.sourcePreview.dataUrl).toMatch(/^data:image\/jpeg;base64,/);
@@ -286,7 +286,7 @@ describe('per-tile overrides and the Result screen', () => {
     });
     const meta = await sharp(destination).metadata();
     expect(meta.format).toBe('jpeg');
-    expect([meta.width, meta.height]).toEqual([800, 400]);
+    expect([meta.width, meta.height]).toEqual([1600, 800]);
 
     // Cancelling the save dialog is reported as a cancellation, not an error.
     expect(await handleExportSave({ imagePath, format: 'png' }, h.service, async () => null)).toMatchObject({

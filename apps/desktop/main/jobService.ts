@@ -375,15 +375,17 @@ export function createJobService(deps: JobServiceDeps): JobService {
       if (!record) throw new JobServiceError('not-found', 'That job no longer exists.');
       if (!record.result) throw new JobServiceError('illegal', 'The picture has not been put together yet.');
       try {
-        const [sourcePreview, preview] = await Promise.all([
+        const [sourcePreview, preview, finished] = await Promise.all([
           previewImage(record.job.source.path, maxSide),
           previewImage(record.result.imagePath, maxSide),
+          sharp(record.result.imagePath).metadata(),
         ]);
         return {
           jobId,
           ...record.result,
-          width: record.plan.source.width,
-          height: record.plan.source.height,
+          // The finished picture can be larger than the original when the provider returned extra detail.
+          width: finished.width ?? record.plan.source.width,
+          height: finished.height ?? record.plan.source.height,
           plan: record.plan,
           sourcePreview,
           preview,
