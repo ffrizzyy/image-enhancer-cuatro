@@ -83,15 +83,15 @@ Parallel tracks: slicer (T14–T16), providers (T17–T19), stitcher (T20–T22)
 - [x] **T32** Per-tile actions: Result UI — deps: T31, T29
 
 ### Checkpoint E — after T29–T32
-- [ ] Full fake flow import → export <2 min; dimensions match; per-tile re-run updates result
-- [ ] Human review before Phase 5
+- [x] Full fake flow import → export <2 min; dimensions match; per-tile re-run updates result (manual check done by the user, 2026-11-06)
+- [x] Human review before Phase 5 (done by the user, 2026-11-06)
 
 ## Phase 5 — Remaining Providers and Polish
 
-- [ ] **T33** Gemini adapter — deps: T19, T17
-- [ ] **T34** Grok adapter — deps: T19, T17
-- [x] **T35** Settings: template overrides, pacing presets, data folder, browser note — deps: T10, T8 (manual restart check of an override still to do by hand)
-- [ ] **T36** E2E, accessibility, and release hardening — deps: T28, T30, T32, T33, T34, T35
+- [x] **T33** Gemini adapter — deps: T19, T17 (live check done by the user, 2026-11-06)
+- [x] **T34** Grok adapter — deps: T19, T17 (live check done by the user, 2026-11-06)
+- [x] **T35** Settings: template overrides, pacing presets, data folder, browser note — deps: T10, T8 (manual check done by the user)
+- [ ] **T36** E2E, accessibility, and release hardening — deps: T28, T30, T32, T33, T34, T35 (done: full-flow test with captcha pause/resume and 3-format export at service level, renderer isolation test, axe audit of every screen, README. Open: a Playwright-driven Electron run, keyboard-only flow beyond the existing shell tests, packaged-app run on Windows)
 
 ### Checkpoint F — after T33–T36
 - [ ] All adapters pass contract tests; Gemini/Grok live smokes pass

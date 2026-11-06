@@ -1,0 +1,67 @@
+# Image Enhancer
+
+A Windows desktop app that enhances a large image by cutting it into overlapping tiles, sending each tile to an AI
+provider (ChatGPT, Gemini or Grok) through that provider's website, and stitching the results back into one picture.
+You log in to your own accounts; the app never reads or stores your password and never solves captchas for you.
+
+## Account and terms-of-service risk
+
+Automating a provider's website may go against its terms of service. Providers can rate-limit, challenge or suspend
+accounts they see as automated. You use your own accounts at your own risk. The app shows this notice on first run and
+you can read it again in **Settings**. Images are sent only to the provider you choose.
+
+## Setup
+
+Requires Node 22 and pnpm.
+
+```
+pnpm install
+pnpm dev          # build and start the app
+```
+
+Provider windows use the app's built-in browser (never your system default browser). Open **Settings**, choose
+**Open login** for a provider and log in yourself.
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `pnpm dev` | Build and run the app |
+| `pnpm test` | All unit, integration, accessibility and isolation tests |
+| `pnpm typecheck` / `pnpm lint` | Type and lint checks |
+| `pnpm build` | Build every package |
+| `pnpm package` | Windows build in `apps/desktop/release` |
+| `pnpm --filter @ie/desktop smoke` | Launch the built app headlessly and run an import and a fake job |
+
+To try the whole flow without an account, run the app with the fake provider (development builds only):
+`IE_FAKE_PROVIDER=1 pnpm dev`. `IE_FAKE_FAIL_RATE` (0-1) injects failures and `IE_FAKE_DELAY_MS` slows it down.
+
+## How it works
+
+1. **Import** an image, choose a category (or let Auto-detect suggest one), a prompt and a tile grid.
+2. **Run**: tiles go to the provider one at a time (Safe) or two at a time (Normal), with pauses between them. A captcha,
+   a logged-out session or a usage limit pauses the job and the provider window comes forward; solve it and the job
+   carries on without repeating finished tiles.
+3. **Result**: compare original and enhanced, check seams, fix flagged tiles (try again, accept, change prompt or picture).
+4. **Save** as PNG, JPEG or WebP. If the provider returns tiles larger than they were sent, the result is larger than
+   the original (up to 4x, capped at 72 megapixels) and keeps that detail.
+
+## Data locations
+
+Everything is in the app's data folder (**Settings -> Open data folder**; on Windows `%APPDATA%\@ie\desktop`):
+
+| Path | Contents |
+|---|---|
+| `jobs.sqlite` | Jobs, tiles, events |
+| `jobs/<id>/` | Tiles, provider outputs, the stitched picture |
+| `overrides/<category>.json` | Your prompt-template edits (the shipped catalog is never modified) |
+| `settings.json` | Pacing preset, watch mode, acknowledgements |
+| `Partitions/` | Provider logins (browser storage) |
+
+Nothing is deleted automatically. **Settings -> Clear job data** removes all jobs after a confirmation.
+
+## Project layout
+
+`apps/desktop` (Electron main, preload, React renderer) and `packages/` for contracts, presets, intake, slicer, stitcher,
+providers, sessions and orchestrator. The renderer only talks to the main process through typed IPC; a test enforces that
+it imports none of the provider, session, orchestrator or stitcher packages. Specs are in `SPEC*.md`, the plan in `tasks/`.
