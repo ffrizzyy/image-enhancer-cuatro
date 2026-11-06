@@ -385,7 +385,13 @@ describe('crash and concurrency (real processes)', () => {
       ),
     );
     // Every process must see the completed migration of whichever one won the race, not try to create it again.
-    for (const result of results) expect(result.stderr).toBe('');
+    // Node prints an ExperimentalWarning for SQLite on some versions; only real errors matter here.
+    for (const result of results) {
+      const errors = result.stderr
+        .split(/\r?\n/)
+        .filter((line) => line.trim() !== '' && !line.includes('ExperimentalWarning') && !line.includes('--trace-warnings'));
+      expect(errors, errors.join('\n')).toEqual([]);
+    }
     expect(results.map((r) => r.code)).toEqual([0, 0, 0, 0]);
 
     const store = track(openStore(file));
@@ -395,7 +401,8 @@ describe('crash and concurrency (real processes)', () => {
     raw.close();
   }, 30_000);
 
-  it('a second writer waits for the first within the busy timeout, then succeeds', async () => {    const file = dbFile();
+  it('a second writer waits for the first within the busy timeout, then succeeds', async () => {
+    const file = dbFile();
     const store = track(openStore(file, { busyTimeoutMs: 5000 }));
     const holder = spawn(process.execPath, [child, file, 'hold', '500'], { stdio: ['ignore', 'pipe', 'inherit'] });
     await new Promise<void>((resolve) => holder.stdout.on('data', (chunk: Buffer) => chunk.toString().includes('LOCKED') && resolve()));
