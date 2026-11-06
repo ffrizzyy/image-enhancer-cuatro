@@ -18,6 +18,7 @@
     "e2e": "pnpm --filter @ie/desktop e2e",
     "dev": "pnpm --filter @ie/desktop dev",
     "package": "pnpm --filter @ie/desktop package",
+    "dist": "pnpm --filter @ie/desktop dist",
     "format": "prettier --write ."
   },
   "devDependencies": {

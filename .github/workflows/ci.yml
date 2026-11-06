@@ -25,11 +25,19 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - run: pnpm e2e
-      - run: pnpm package
+      - run: pnpm dist
       - run: node scripts/package-smoke.mjs
 
       - uses: actions/upload-artifact@v4
         with:
           name: image-enhancer-win-unpacked
           path: apps/desktop/release/win-unpacked
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: image-enhancer-windows
+          path: |
+            apps/desktop/release/*-setup.exe
+            apps/desktop/release/*-portable.exe
           if-no-files-found: error

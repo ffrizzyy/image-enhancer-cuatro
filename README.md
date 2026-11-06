@@ -46,13 +46,27 @@ Provider windows use the app's built-in browser (never your system default brows
 | `pnpm test` | All unit, integration, accessibility and isolation tests |
 | `pnpm typecheck` / `pnpm lint` | Type and lint checks |
 | `pnpm build` | Build every package |
-| `pnpm package` | Windows build in `apps/desktop/release` |
+| `pnpm package` | Unpacked Windows test build in `apps/desktop/release/win-unpacked` |
+| `pnpm dist` | Windows installer and portable exe in `apps/desktop/release` |
 | `pnpm e2e` | Drive the real Electron window through import → setup → captcha pause → resume → export |
 | `pnpm --filter @ie/desktop smoke` | Launch the built app headlessly and run an import and a fake job |
 
 To try the whole flow without an account, run the app with the fake provider (development builds only):
 `IE_FAKE_PROVIDER=1 pnpm dev`. `IE_FAKE_FAIL_RATE` (0-1) injects failures, `IE_FAKE_DELAY_MS` slows it down, and
 `IE_FAKE_MODES=ok,challenge,ok,...` scripts one outcome per provider call (the e2e uses this to inject a captcha).
+
+## Sharing the app
+
+`pnpm dist` writes two files to `apps/desktop/release`:
+
+- `Image-Enhancer-<version>-setup.exe` — a per-user installer (no administrator prompt) that adds Start-menu and
+  desktop shortcuts and an uninstaller.
+- `Image-Enhancer-<version>-portable.exe` — one self-extracting exe that runs without installing.
+
+Both are unsigned. Windows SmartScreen will warn that the publisher is unknown, and Smart App Control may block the
+app on machines that enforce it. To remove that friction, sign the build with an Authenticode certificate by setting
+`CSC_LINK` (a `.pfx` file or its base64) and `CSC_KEY_PASSWORD` before running `pnpm dist`. There is no auto-update:
+each release is a new download, and the build still uses Electron's default icon.
 
 ## How it works
 

@@ -13,6 +13,7 @@
     "e2e": "node scripts/build.mjs && node e2e/fullFlow.mjs",
     "provider-tool": "node scripts/build.mjs && electron . --provider-tool",
     "package": "node scripts/build.mjs && electron-builder --dir --win --config electron-builder.yml",
+    "dist": "node scripts/build.mjs && electron-builder --win --config electron-builder.yml",
     "package:smoke": "node ../../scripts/package-smoke.mjs",
     "rebuild:native": "electron-rebuild --module-dir .",
     "typecheck": "tsc -p tsconfig.json --noEmit",

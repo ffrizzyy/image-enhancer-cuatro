@@ -12,10 +12,29 @@ asar: true
 asarUnpack:
   - '**/node_modules/sharp/**'
   - '**/node_modules/@img/**'
-# v1 targets Windows only; macOS/Linux are post-v1.
+# v1 targets Windows only; macOS/Linux are post-v1. `pnpm package` builds the unpacked folder used by
+# the smoke check; `pnpm dist` builds the shareable installer and portable exe from this list.
 win:
   target:
-    - dir
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+
+# A per-user install needs no administrator prompt; the user can still choose the folder and gets
+# Start-menu and desktop shortcuts plus an uninstaller.
+nsis:
+  artifactName: "Image-Enhancer-${version}-setup.${ext}"
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Image Enhancer
+
+# One self-extracting exe that runs without installing.
+portable:
+  artifactName: "Image-Enhancer-${version}-portable.${ext}"
 # Native modules: list each under `dependencies`, keep it external in scripts/build.mjs, and
 # electron-builder rebuilds it against Electron's ABI at package time.
 # `pnpm --filter @ie/desktop rebuild:native` runs @electron/rebuild by hand for local dev.
