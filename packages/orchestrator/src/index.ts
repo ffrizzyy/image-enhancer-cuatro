@@ -27,7 +27,7 @@ export { buildAttachments, neighbourStrip, prepareJobFiles, REFERENCE_MAX_PX } f
 export type { JobFiles } from './attachments.ts';
 export { buildTilePrompt, NEIGHBOR_NOTE, PRESERVE_COMPOSITION_CLAUSE, REFERENCE_NOTE, SOFTENED_USER_PROMPT } from './prompts.ts';
 export { costForTiles, costPreview, preflight, TYPICAL_GENERATION_SECONDS } from './preflight.ts';
-export { backoffDelayMs, DEFAULT_BACKOFF, DEFAULT_PACING, pacingDelayMs, validatePacing } from './pacing.ts';
+export { backoffDelayMs, DEFAULT_BACKOFF, DEFAULT_PACING, PACING_PRESETS, pacingDelayMs, validatePacing } from './pacing.ts';
 export type { Backoff } from './pacing.ts';
 export { cancelJob, pauseJob, resumeInfo } from './controls.ts';
 export type { ResumeInfo } from './controls.ts';

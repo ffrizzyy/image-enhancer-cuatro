@@ -3,6 +3,15 @@ import type { Pacing } from '@ie/contracts';
 /** One tile at a time, a random 8-25 s pause between them (the spec's defaults). */
 export const DEFAULT_PACING: Pacing = { concurrency: 1, minDelayMs: 8000, maxDelayMs: 25_000 };
 
+/**
+ * The two Settings presets. Safe is the default: one tile at a time with long pauses. Normal is quicker but still
+ * leaves a human-looking gap between requests.
+ */
+export const PACING_PRESETS: Record<'safe' | 'normal', Pacing> = {
+  safe: DEFAULT_PACING,
+  normal: { concurrency: 2, minDelayMs: 3000, maxDelayMs: 10_000 },
+};
+
 /** Waits before retrying a tile that failed for a passing reason (a timeout, a failed download). */
 export interface Backoff {
   /** The wait before the first retry; each further one doubles it. */

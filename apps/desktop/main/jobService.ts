@@ -56,7 +56,8 @@ export interface JobServiceDeps {
   autoResume?: { settleMs?: number; maxInARow?: number };
   emitProgress: (progress: JobProgress) => void;
   emitLog: (log: { jobId: string; level: 'info' | 'warn' | 'error'; message: string }) => void;
-  pacing?: Pacing;
+  /** Fixed pacing, or a function read at the start of every run so a Settings change applies to the next job. */
+  pacing?: Pacing | (() => Pacing);
   /** Overrides for tests (no real waiting, a stub stitcher). */
   runOptions?: Partial<RunJobOptions>;
 }
@@ -183,6 +184,8 @@ export function createJobService(deps: JobServiceDeps): JobService {
     }
   };
 
+  const currentPacing = (): Pacing => (typeof deps.pacing === 'function' ? deps.pacing() : deps.pacing!);
+
   function launch(jobId: string): void {
     const record = store.getJob(jobId)!;
     const abort = new AbortController();
@@ -197,7 +200,7 @@ export function createJobService(deps: JobServiceDeps): JobService {
           workDir: path.join(deps.dataDir, 'jobs', jobId),
           getSessionStatus: () => deps.sessionStatus(record.job.providerId),
           signal: abort.signal,
-          ...(deps.pacing ? { pacing: deps.pacing } : {}),
+          ...(deps.pacing ? { pacing: currentPacing() } : {}),
           onPause: async (notice: PauseNotice) => {
             // A captcha or a login can only be solved by the person, in the provider's own window.
             if (notice.reason === 'challenge' || notice.reason === 'logged-out') await deps.showProvider?.(notice.providerId);
@@ -433,7 +436,7 @@ export function createJobService(deps: JobServiceDeps): JobService {
 
     get: progressOf,
     listRecent: (limit) => recentJobs(store, limit ?? 10),
-    costPreview: (providerId, tileCount) => costForTiles(tileCount, providerId, deps.pacing),
+    costPreview: (providerId, tileCount) => costForTiles(tileCount, providerId, deps.pacing ? currentPacing() : undefined),
 
     async tileThumbnail(jobId, index, maxSide = DEFAULT_THUMBNAIL_PX) {
       const tile = store.getTile(jobId, index);

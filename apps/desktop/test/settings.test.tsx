@@ -164,3 +164,20 @@ describe('Settings screen', () => {
     expect(bridge.listenerCount()).toBe(0);
   });
 });
+
+describe('Settings: pacing and notice', () => {
+  it('saves the pacing preset and shows the risk notice again on request', async () => {
+    const user = userEvent.setup();
+    const bridge = installBridge({ settings: acknowledgedSettings });
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: 'Settings' }));
+
+    expect(await screen.findByRole('radio', { name: /Safe/ })).toBeChecked();
+    await user.click(screen.getByRole('radio', { name: /Normal/ }));
+    expect(bridge.setSettings).toHaveBeenCalledWith({ pacingPreset: 'normal' });
+    await waitFor(() => expect(screen.getByRole('radio', { name: /Normal/ })).toBeChecked());
+
+    await user.click(screen.getByRole('button', { name: 'Read the notice again' }));
+    expect(screen.getByText(/terms of service/i)).toBeInTheDocument();
+  });
+});

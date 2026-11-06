@@ -15,7 +15,7 @@ import {
 } from '@ie/sessions';
 import { createElectronBackend } from '@ie/sessions/electron';
 import { getFeatures } from '@ie/intake';
-import { openStore } from '@ie/orchestrator';
+import { openStore, PACING_PRESETS } from '@ie/orchestrator';
 import { createGeminiAdapter, createGptAdapter, createGrokAdapter, createImageSaver, type ProviderAdapter } from '@ie/providers';
 import { ElectronPageDriver } from '@ie/providers/electron';
 import { app, BrowserWindow, dialog, ipcMain, session, type WebContents } from 'electron';
@@ -136,6 +136,7 @@ function registerIpc(): void {
   const jobs = createJobService({
     store: openStore(path.join(userData, 'jobs.sqlite'), { onCommit: (change) => jobs.notify(change) }),
     dataDir: userData,
+    pacing: () => PACING_PRESETS[settings.get().pacingPreset],
     adapterFor,
     sessionStatus: (providerId) => manager.status(providerId),
     // The window comes forward only when a real provider needs the person; the dev fake has nothing to show.

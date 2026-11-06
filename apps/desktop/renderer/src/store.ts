@@ -1,6 +1,7 @@
 import {
   CURRENT_RISK_NOTICE_VERSION,
   type AppSettings,
+  type PacingPreset,
   type Category,
   type CostPreview,
   type CategorySuggestion,
@@ -164,6 +165,7 @@ interface ShellState {
   startRun: (jobId: string) => Promise<void>;
   /** Keeps the provider window visible while a job runs (Watch mode), and applies it to the open session now. */
   setWatchMode: (on: boolean, providerId?: ProviderId) => Promise<void>;
+  setPacingPreset: (preset: PacingPreset) => Promise<void>;
   /** Starts listening for live job progress and activity; returns the unsubscribe function. */
   subscribeJobs: () => () => void;
   loadRecentJobs: () => Promise<void>;
@@ -439,6 +441,15 @@ export const useShellStore = create<ShellState>((set, get) => ({
       if (!result.ok) set({ runError: result.error.message });
     } catch (error) {
       set({ runError: `Could not start the job: ${String(error)}` });
+    }
+  },
+  setPacingPreset: async (preset) => {
+    try {
+      const saved = await ipc.settings.set({ pacingPreset: preset });
+      if (saved.ok) set({ settings: saved.value, settingsError: null });
+      else set({ settingsError: saved.error.message });
+    } catch (error) {
+      set({ settingsError: `Pacing could not be changed: ${String(error)}` });
     }
   },
   setWatchMode: async (on, providerId) => {
