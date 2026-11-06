@@ -37,37 +37,25 @@ export const FIDELITY_CLAUSES: Record<Fidelity, string> = {
   reimagine: 'FIDELITY: REIMAGINE. You may reinterpret the image while keeping its general subject and layout.',
 };
 
-/** Shared frame, sections 1-3. `tile` says where this tile sits in the full picture. */
-const frameStart = (tile: string): string => `Edit the attached image: image-to-image enhancement. Do NOT create a new picture and do NOT reimagine anything. Return the SAME picture, restored and upscaled into a far more detailed, high-resolution version. Output exactly ONE image.
+/** Shared frame, first half. `tile` says where this tile sits in the full picture. */
+const frameStart = (tile: string): string => `Restore and upscale the attached image. This is an edit of the same picture, not a new one: return one image with identical composition, at higher resolution and with real fine detail.
 
-1. EXACT GEOMETRY AND PROPORTIONS (HIGHEST PRIORITY)
-- IMPORTANT: this image is ONE TILE cut from a larger picture. Many neighbouring tiles are enhanced separately and then stitched back together, so ANY shift, stretch, warp or change of proportion creates a visible mismatch. The enhanced image must line up with the attached image pixel for pixel.
-- POSITION: this tile is ${tile}.
-- Treat the attached image as a locked reference layer: if the result were placed exactly on top of it, every edge, contour, line, object, body part and facial feature must sit in the same position, with the same size and the same proportions.
-- Do not move, resize, rotate, bend, stretch, squash, slim, widen, lengthen or reshape anything. Straight lines must stay perfectly straight (window grids, building edges, poles, panel lines, text); curves keep their exact curvature; angles and perspective stay identical.
-- Keep the exact field of view and scale: no zoom, no crop, no reframing, no outpainting, no borders, the exact same aspect ratio.
-- Anything cut by an edge of the image stays cut at exactly the same place and angle. Do not complete or close objects at the border.
-- Do not add, remove, move, duplicate or replace any object, person, mark, sign, logo or text.
+The attached image is one tile of a larger picture (${tile}). Neighbouring tiles are enhanced separately and stitched back, so the result must register with the attached image pixel for pixel:
+- Every edge, contour, object and feature stays at the same position, size and proportion. Nothing is moved, scaled, rotated, bent or reshaped; straight lines stay straight.
+- Same framing and aspect ratio: no zoom, no crop, no extra border, no outpainting. Anything cut by the tile edge stays cut at the same place.
+- Do not add, remove or replace any object, person, mark, logo or text.
+- Keep the original colours, white balance, contrast, light direction and shadows. Do not brighten, warm, saturate or dramatise.
 
-2. COLOR AND LIGHT (NON-NEGOTIABLE)
-- Keep the original colour palette, hue, saturation, white balance, tonal balance, light direction, shadows, highlights and reflections. Do not make it brighter, darker, warmer, cooler, more saturated or more dramatic. No new light sources.
+Make it look like a genuinely high-resolution capture of the same scene, not a processed one:
+- Recover the detail that is implied by the pixels (fibres, grain, pores, bricks, hair, bark, scratches) at its true physical scale, the same scale in every tile.
+- Keep natural imperfections: fine grain, slight irregularity, wear, uneven surfaces. Surfaces must not turn smooth, waxy or plastic.
+- Where the original is ambiguous, stay close to it rather than inventing detail.
+- Render it in the original's own medium, with no illustrated, painterly, HDR or "AI art" finish.`;
 
-3. CONSISTENCY ACROSS ALL TILES (VERY IMPORTANT)
-- Every tile of this picture must look as if it was enhanced in ONE pass by the same artist: the same style, the same rendering approach, the same density of added detail, the same texture scale and the same texture contrast.
-- The size of every texture and detail is set by the real (or painted) scale of the subject in the WHOLE picture, never by the size of this crop. A leaf, brick, pore, hair strand, brush stroke or fabric thread keeps the same size whether the tile shows a lot or only a little of it.
-- Add detail only INSIDE what already exists; where a detail is ambiguous, stay faithful to the original.`;
+/** Shared frame, second half. */
+const FRAME_END = `Technical: clean edges with no halos or ringing, no over-sharpening, no banding, no repeating or tiled texture patterns, no compression artifacts. Output a single high-resolution image of the same aspect ratio (2048 px or more on the long side), with no text, border, collage, watermark or before/after.
 
-/** Shared frame, sections 4-6 and the final priority. */
-const FRAME_END = `4. QUALITY
-- Clean edges without halos, ringing or over-sharpening; less compression noise and artifacts; smooth gradients without banding; no artificial detail patterns.
-
-5. OUTPUT RESOLUTION (REQUIRED)
-- Generate a HIGH-RESOLUTION image: at least 2K (2048 px on the longest side; higher is better, for example 4096 px if possible), with exactly the same aspect ratio as the attached image so the result can be placed back exactly over it.
-
-6. OUTPUT
-- Return the image itself, no text. No collage, no before/after, no borders, no labels, no watermark, no added text.
-
-FINAL PRIORITY: 1) EXACT GEOMETRY AND PROPORTIONS, 2) FIDELITY TO THE ATTACHED IMAGE AND THE MASTER GUIDE, 3) CONSISTENT, CONTENT-TYPE-CORRECT REGENERATED DETAIL.`;
+If rules conflict, priority is: 1) exact geometry, 2) fidelity to the attached image and the guide above, 3) natural, believable detail.`;
 const PLACEHOLDER_PATTERN = /\{\{\s*(\w+)\s*\}\}/g;
 
 /** Placeholder names used in a template that are not supported. */

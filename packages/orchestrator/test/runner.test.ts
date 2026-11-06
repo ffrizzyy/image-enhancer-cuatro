@@ -104,7 +104,7 @@ describe('what each call is given', () => {
     expect(first.attachments[0]!.path).toMatch(/tile-000\.png$/);
     expect(first.prompt).toContain(REFERENCE_NOTE);
     expect(first.prompt).not.toContain(NEIGHBOR_NOTE);
-    expect(first.prompt).toContain('POSITION: this tile is'); // from the category's prompt builder
+    expect(first.prompt).toContain('one tile of a larger picture ('); // from the category's prompt builder
     expect(first.prompt).toContain('Enhance this tile.'); // the user's text
 
     const reference = await sharp(first.attachments[1]!.path).metadata();
