@@ -64,8 +64,8 @@ To try the whole flow without an account, run the app with the fake provider (de
 **For the person installing it**
 
 1. Download the exe from the official link (a GitHub Release, not an email attachment).
-2. Optionally verify it: `Get-FileHash .\Image-Enhancer-0.1.0-setup.exe -Algorithm SHA256` and compare with the
-   published checksum.
+2. Optionally verify it: `Get-FileHash .\Image-Enhancer-*-setup.exe -Algorithm SHA256` and compare with the checksum
+   published beside the download.
 3. Run it. It installs for the current user, so Windows does not ask for administrator rights.
 4. Keep the default folder (`%LOCALAPPDATA%\Programs\Image Enhancer`) or choose another one, then finish.
 5. Launch **Image Enhancer** from the Start menu or the desktop shortcut.
