@@ -10,6 +10,7 @@
     "build": "node scripts/build.mjs",
     "dev": "node scripts/build.mjs && electron .",
     "smoke": "node scripts/build.mjs && electron . --smoke",
+    "e2e": "node scripts/build.mjs && node e2e/fullFlow.mjs",
     "provider-tool": "node scripts/build.mjs && electron . --provider-tool",
     "package": "node scripts/build.mjs && electron-builder --dir --win --config electron-builder.yml",
     "package:smoke": "node ../../scripts/package-smoke.mjs",

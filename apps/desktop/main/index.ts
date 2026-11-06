@@ -1,4 +1,4 @@
-import { mkdtempSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
 import { mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -12,6 +12,9 @@ import {
   PROVIDER_IDS,
   partitionFor,
   providersConfig,
+  type ProviderView,
+  type SessionManager,
+  type SessionMonitor,
 } from '@ie/sessions';
 import { createElectronBackend } from '@ie/sessions/electron';
 import { getFeatures } from '@ie/intake';
@@ -56,6 +59,45 @@ const smoke = process.argv.includes('--smoke');
 // Smoke runs use a throwaway profile so they never touch (or depend on) real settings and logins.
 if (smoke) app.setPath('userData', mkdtempSync(path.join(tmpdir(), 'ie-smoke-profile-')));
 
+// The Playwright e2e (and a packaged run on an isolated profile) can point the app at its own data folder too.
+// Electron requires the folder to exist before it is made the user-data path.
+const userDataOverride = process.env.IE_USER_DATA_DIR;
+if (userDataOverride) {
+  mkdirSync(userDataOverride, { recursive: true });
+  app.setPath('userData', userDataOverride);
+}
+
+/** Sorting the dev fake's provider session: every provider is always ready, and opening one never opens a browser. */
+function createDevFakeSessionManager(): SessionManager {
+  const view = (partition: string): ProviderView => ({
+    partition,
+    setVisible: () => undefined,
+    isVisible: () => false,
+    loadURL: async () => undefined,
+    evaluate: async <T>() => undefined as T,
+    close: () => undefined,
+  });
+  return {
+    async open(provider, opts) {
+      const partition = partitionFor(provider);
+      return { providerId: provider, partition, visible: opts?.visible ?? false, view: view(partition) };
+    },
+    openProviders: () => [],
+    status: async () => 'ready',
+    clear: async () => undefined,
+  };
+}
+
+/** The dev fake has no login to watch, so its monitor is a no-op. */
+function createDevFakeSessionMonitor(): SessionMonitor {
+  return {
+    start: () => undefined,
+    stop: () => undefined,
+    tick: async () => undefined,
+    forget: () => undefined,
+  };
+}
+
 export const CSP = [
   "default-src 'none'",
   "script-src 'self'",
@@ -95,12 +137,13 @@ function registerIpc(): void {
   const settings = createSettingsStore(path.join(app.getPath('userData'), 'settings.json'), app.getPath('userData'));
   if (smoke) settings.set({ firstRunAcknowledged: true, riskNoticeVersion: CURRENT_RISK_NOTICE_VERSION });
 
-  const manager = createSessionManager({
+  const devFake = wantsDevFake(app.isPackaged);
+  const manager = devFake ? createDevFakeSessionManager() : createSessionManager({
     backend: createElectronBackend(),
     healthProbe: createHealthProbe(),
     loginUrlFor: (provider) => providersConfig[provider].loginUrl,
   });
-  const monitor = createSessionMonitor({
+  const monitor = devFake ? createDevFakeSessionMonitor() : createSessionMonitor({
     manager,
     onStatus: (providerId, status) => {
       if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('sessions.status', { providerId, status });
@@ -108,7 +151,7 @@ function registerIpc(): void {
       jobs.onSessionStatus(providerId, status);
     },
   });
-  if (!smoke) monitor.start();
+  if (!smoke && !devFake) monitor.start();
   const sessionDeps = { manager, monitor };
 
   ipcMain.handle('app.ping', (_event, payload: unknown) => {
@@ -128,8 +171,18 @@ function registerIpc(): void {
   const send = (channel: string, payload: unknown): void => {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, payload);
   };
+  // The dev fake keeps one adapter per provider for the profile: `IE_FAKE_MODES` is a sequence across resumes,
+  // not a sequence that restarts every time a paused job continues.
+  const devFakeAdapters = new Map<ProviderId, ProviderAdapter>();
   const adapterFor = async (providerId: ProviderId): Promise<AdapterLease> => {
-    if (wantsDevFake(app.isPackaged)) return { adapter: createDevFakeProvider(userData) };
+    if (devFake) {
+      let adapter = devFakeAdapters.get(providerId);
+      if (!adapter) {
+        adapter = createDevFakeProvider(userData);
+        devFakeAdapters.set(providerId, adapter);
+      }
+      return { adapter };
+    }
     // Watch mode keeps the provider window on screen; otherwise it opens only when it needs the person.
     const opened = await manager.open(providerId, { visible: settings.get().watchMode });
     const driver = new ElectronPageDriver(opened.view.native);
@@ -137,16 +190,20 @@ function registerIpc(): void {
     const adapter: ProviderAdapter = providerId === 'gemini' ? createGeminiAdapter({ driver, saveImage, reuseChat: true }) : providerId === 'gpt' ? createGptAdapter({ driver, saveImage, reuseChat: true }) : createGrokAdapter({ driver, saveImage, reuseChat: true });
     return { adapter, release: () => driver.dispose() };
   };
+  const autoResumeMs = Number(process.env.IE_FAKE_AUTO_RESUME_MS ?? 3000);
   const jobs = createJobService({
     store: openStore(path.join(userData, 'jobs.sqlite'), { onCommit: (change) => jobs.notify(change) }),
     dataDir: userData,
-    pacing: () => PACING_PRESETS[settings.get().pacingPreset],
+    // The fake provider has nothing to pace: an e2e (and a person watching a fake run) should not wait 8-25 s per tile.
+    pacing: () => (devFake ? { concurrency: 1, minDelayMs: 0, maxDelayMs: 0 } : PACING_PRESETS[settings.get().pacingPreset]),
     adapterFor,
-    sessionStatus: (providerId) => manager.status(providerId),
+    sessionStatus: devFake ? async () => 'ready' : (providerId) => manager.status(providerId),
+    // The e2e keeps a pause on screen long enough to press Resume; normal fake runs auto-resume as usual.
+    ...(devFake ? { autoResume: { settleMs: Number.isFinite(autoResumeMs) ? autoResumeMs : 3000 } } : {}),
     // The window comes forward only when a real provider needs the person; the dev fake has nothing to show.
-    ...(wantsDevFake(app.isPackaged) ? {} : { showProvider: async (providerId: ProviderId) => void (await manager.open(providerId, { visible: true })) }),
+    ...(devFake ? {} : { showProvider: async (providerId: ProviderId) => void (await manager.open(providerId, { visible: true })) }),
     // And goes back to how they want it (hidden unless Watch mode is on) when the job carries on.
-    ...(wantsDevFake(app.isPackaged) ? {} : { restoreWindow: async (providerId: ProviderId) => void (await manager.open(providerId, { visible: settings.get().watchMode })) }),
+    ...(devFake ? {} : { restoreWindow: async (providerId: ProviderId) => void (await manager.open(providerId, { visible: settings.get().watchMode })) }),
     emitProgress: (progress) => send('jobs.progress', progress),
     emitLog: (log) => send('jobs.log', log),
   });
@@ -232,7 +289,7 @@ async function smokeImport(): Promise<boolean> {
     );
     return suggested.ok;
   } finally {
-    await rm(file, { force: true });
+    await rm(file, { force: true }).catch(() => undefined);
   }
 }
 
@@ -275,12 +332,26 @@ async function smokeJobs(): Promise<boolean> {
       await service.start('SMOKE');
       await service.whenIdle();
       const finished = service.get('SMOKE');
-      return finished.state === 'done' && finished.completedTiles === 4;
+      if (finished.state !== 'done' || finished.completedTiles !== 4) return false;
+
+      // Exporting is part of the release check: prove all three formats are written at the finished picture's size.
+      // The file is read into memory first: on Windows, a sharp instance reading a file by path can keep the file
+      // handle open, which would block the cleanup below.
+      const result = await service.result('SMOKE');
+      for (const format of ['png', 'jpeg', 'webp'] as const) {
+        const destination = path.join(dir, `export.${format}`);
+        const saved = await service.save({ imagePath: result.imagePath, format, destination });
+        const meta = await sharp(readFileSync(saved.path)).metadata();
+        if (meta.width !== result.width || meta.height !== result.height) return false;
+      }
+      return true;
     } finally {
       store.close();
     }
   } finally {
-    await rm(dir, { recursive: true, force: true });
+    // Windows can keep a freshly written file locked for a moment (antivirus, indexing); a leftover temp folder
+    // must never turn a passing smoke into a failure.
+    await rm(dir, { recursive: true, force: true }).catch(() => undefined);
   }
 }
 

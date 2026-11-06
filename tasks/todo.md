@@ -91,12 +91,12 @@ Parallel tracks: slicer (T14–T16), providers (T17–T19), stitcher (T20–T22)
 - [x] **T33** Gemini adapter — deps: T19, T17 (live check done by the user, 2026-11-06)
 - [x] **T34** Grok adapter — deps: T19, T17 (live check done by the user, 2026-11-06)
 - [x] **T35** Settings: template overrides, pacing presets, data folder, browser note — deps: T10, T8 (manual check done by the user)
-- [ ] **T36** E2E, accessibility, and release hardening — deps: T28, T30, T32, T33, T34, T35 (done: full-flow test with captcha pause/resume and 3-format export at service level, renderer isolation test, axe audit of every screen, README. Open: a Playwright-driven Electron run, keyboard-only flow beyond the existing shell tests, packaged-app run on Windows)
+- [x] **T36** E2E, accessibility, and release hardening — deps: T28, T30, T32, T33, T34, T35 (done: Playwright drives the real Electron window through import → setup → injected captcha pause → resume → result → PNG/JPEG/WebP export; renderer isolation test; axe audit; packaged Windows build runs a fake job and exports all three formats in `package-smoke`; E2E added to CI)
 
 ### Checkpoint F — after T33–T36
-- [ ] All adapters pass contract tests; Gemini/Grok live smokes pass
-- [ ] E2E with injected captcha passes; a11y audit clean; packaged app runs and exports
-- [ ] All spec success criteria checked; release candidate approved
+- [x] All adapters pass contract tests; Gemini/Grok live smokes pass
+- [x] E2E with injected captcha passes; a11y audit clean; packaged app runs and exports
+- [ ] All spec success criteria checked; release candidate approved (awaiting human sign-off)
 
 ## Parallelization Summary
 

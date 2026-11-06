@@ -47,10 +47,12 @@ Provider windows use the app's built-in browser (never your system default brows
 | `pnpm typecheck` / `pnpm lint` | Type and lint checks |
 | `pnpm build` | Build every package |
 | `pnpm package` | Windows build in `apps/desktop/release` |
+| `pnpm e2e` | Drive the real Electron window through import → setup → captcha pause → resume → export |
 | `pnpm --filter @ie/desktop smoke` | Launch the built app headlessly and run an import and a fake job |
 
 To try the whole flow without an account, run the app with the fake provider (development builds only):
-`IE_FAKE_PROVIDER=1 pnpm dev`. `IE_FAKE_FAIL_RATE` (0-1) injects failures and `IE_FAKE_DELAY_MS` slows it down.
+`IE_FAKE_PROVIDER=1 pnpm dev`. `IE_FAKE_FAIL_RATE` (0-1) injects failures, `IE_FAKE_DELAY_MS` slows it down, and
+`IE_FAKE_MODES=ok,challenge,ok,...` scripts one outcome per provider call (the e2e uses this to inject a captcha).
 
 ## How it works
 

@@ -21,9 +21,9 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/scripts/**/*.mjs', '**/test/integration/**/*.ts'],
+    files: ['**/scripts/**/*.mjs', '**/e2e/**/*.mjs', '**/test/integration/**/*.ts'],
     languageOptions: {
-      globals: { console: 'readonly', process: 'readonly' },
+      globals: { Buffer: 'readonly', console: 'readonly', process: 'readonly' },
     },
   },
 );

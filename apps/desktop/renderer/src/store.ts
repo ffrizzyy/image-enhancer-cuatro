@@ -299,7 +299,14 @@ export const useShellStore = create<ShellState>((set, get) => ({
     set({ providerError: null });
     try {
       const result = await ipc.sessions.open(provider, visible);
-      if (!result.ok) set({ providerError: result.error.message });
+      if (!result.ok) {
+        set({ providerError: result.error.message });
+        return;
+      }
+      // Opening a provider also refreshes its status, so a fake provider (or one that just became ready) lets Start proceed.
+      // An `unknown` reading is not an improvement: keep a known status until the live monitor reports a new one.
+      const status = await ipc.sessions.status(provider);
+      if (status.ok && status.value !== 'unknown') set((state) => ({ providers: { ...state.providers, [provider]: status.value } }));
     } catch (error) {
       set({ providerError: `Could not open the provider window: ${String(error)}` });
     }

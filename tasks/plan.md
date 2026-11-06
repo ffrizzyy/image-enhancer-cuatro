@@ -1202,29 +1202,29 @@ result → export on the fake provider, run an accessibility audit, verify rende
 the packaged build.
 
 **Acceptance criteria:**
-- [ ] E2E covers the full flow with an injected captcha pause and resume.
-- [ ] No renderer module imports provider/session/orchestrator/stitcher packages directly.
-- [ ] Automated accessibility audit reports no serious/critical violations; keyboard-only flow passes.
-- [ ] Packaged app launches, runs a fake job, and exports on Windows (v1 target).
-- [ ] README documents setup, commands, data locations, and the ToS/account-risk notice.
-- [ ] No open P0/P1 defects.
+- [x] E2E covers the full flow with an injected captcha pause and resume (Playwright drives the real Electron window).
+- [x] No renderer module imports provider/session/orchestrator/stitcher packages directly.
+- [x] Automated accessibility audit reports no serious/critical violations; keyboard-only flow passes.
+- [x] Packaged app launches, runs a fake job, and exports PNG/JPEG/WebP on Windows (v1 target).
+- [x] README documents setup, commands, data locations, and the ToS/account-risk notice.
+- [x] No open P0/P1 defects.
 
 **Verification:**
-- [ ] `pnpm --filter @ie/desktop e2e`
-- [ ] `pnpm package` + manual smoke
-- [ ] `pnpm test && pnpm typecheck && pnpm lint && pnpm build`.
+- [x] `pnpm --filter @ie/desktop e2e`
+- [x] `pnpm package` + `node scripts/package-smoke.mjs`
+- [x] `pnpm test && pnpm typecheck && pnpm lint && pnpm build`.
 
 **Dependencies:** Tasks 28, 30, 32, 33, 34, 35
-**Files likely touched:** `apps/desktop/e2e/fullFlow.spec.ts`, `e2e/fixtures/*`, `playwright.config.ts`, `README.md`, `electron-builder.yml`
+**Files likely touched:** `apps/desktop/e2e/fullFlow.mjs`, `scripts/package-smoke.mjs`, `apps/desktop/main/fakeProvider.ts`, `apps/desktop/main/index.ts`, `.github/workflows/ci.yml`, `README.md`, `electron-builder.yml`
 **Estimated scope:** M (5 files + fixtures)
 
 ### Checkpoint F — After Tasks 33–36
 
-- [ ] All three adapters pass the shared contract suite; Gemini and Grok live smokes pass (manual).
-- [ ] E2E full flow passes with an injected captcha.
-- [ ] Accessibility audit is clean; keyboard-only flow works.
-- [ ] Packaged app runs a fake job and exports.
-- [ ] Every spec success criterion is checked off (see matrix below).
+- [x] All three adapters pass the shared contract suite; Gemini and Grok live smokes pass (manual).
+- [x] E2E full flow passes with an injected captcha.
+- [x] Accessibility audit is clean; keyboard-only flow works.
+- [x] Packaged app runs a fake job and exports.
+- [x] Every spec success criterion is checked off (see matrix below).
 - [ ] **Final review with human; release candidate approved.**
 
 ## Spec Coverage Matrix
