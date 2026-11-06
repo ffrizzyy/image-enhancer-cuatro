@@ -57,16 +57,33 @@ To try the whole flow without an account, run the app with the fake provider (de
 
 ## Sharing the app
 
-`pnpm dist` writes two files to `apps/desktop/release`:
+`pnpm dist` writes one file to `apps/desktop/release`:
 
-- `Image-Enhancer-<version>-setup.exe` — a per-user installer (no administrator prompt) that adds Start-menu and
-  desktop shortcuts and an uninstaller.
-- `Image-Enhancer-<version>-portable.exe` — one self-extracting exe that runs without installing.
+- `Image-Enhancer-<version>-setup.exe` — a per-user installer (about 123 MB). This is the only file a user needs.
 
-Both are unsigned. Windows SmartScreen will warn that the publisher is unknown, and Smart App Control may block the
-app on machines that enforce it. To remove that friction, sign the build with an Authenticode certificate by setting
-`CSC_LINK` (a `.pfx` file or its base64) and `CSC_KEY_PASSWORD` before running `pnpm dist`. There is no auto-update:
-each release is a new download, and the build still uses Electron's default icon.
+**For the person installing it**
+
+1. Download the exe from the official link (a GitHub Release, not an email attachment).
+2. Optionally verify it: `Get-FileHash .\Image-Enhancer-0.1.0-setup.exe -Algorithm SHA256` and compare with the
+   published checksum.
+3. Run it. It installs for the current user, so Windows does not ask for administrator rights.
+4. Keep the default folder (`%LOCALAPPDATA%\Programs\Image Enhancer`) or choose another one, then finish.
+5. Launch **Image Enhancer** from the Start menu or the desktop shortcut.
+
+Until the build is signed, SmartScreen shows “Windows protected your PC”: choose **More info → Run anyway**. Do not
+turn SmartScreen off system-wide. Uninstall from **Settings → Apps → Installed apps → Image Enhancer**, or from the
+Start-menu folder.
+
+**For the publisher**
+
+- Publish the exe as a **GitHub Release** asset and link to that page. CI artifacts are handy for testing but expire.
+- Publish a SHA-256 checksum beside the download.
+- Sign the build with an Authenticode certificate: set `CSC_LINK` (a `.pfx` file or its base64) and
+  `CSC_KEY_PASSWORD` before `pnpm dist`. An EV certificate earns SmartScreen reputation immediately; an OV one earns
+  it over time.
+- Test install and uninstall on a clean Windows VM before a wide release.
+- There is no auto-update: each release is a new download. Installing a newer setup over an older one replaces the
+  app and keeps the user's data. The build still uses Electron's default icon.
 
 ## How it works
 

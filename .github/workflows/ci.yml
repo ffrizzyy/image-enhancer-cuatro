@@ -36,8 +36,6 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: image-enhancer-windows
-          path: |
-            apps/desktop/release/*-setup.exe
-            apps/desktop/release/*-portable.exe
+          name: image-enhancer-installer
+          path: apps/desktop/release/*-setup.exe
           if-no-files-found: error
