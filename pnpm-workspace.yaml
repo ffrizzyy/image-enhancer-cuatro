@@ -8,3 +8,6 @@ allowBuilds:
 
 minimumReleaseAgeExclude:
   - electron@45.2.3
+
+patchedDependencies:
+  vitest@3.2.7: patches/vitest@3.2.7.patch

@@ -162,6 +162,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  vitest@3.2.7: 210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833
+
 importers:
 
   .:
@@ -174,7 +177,7 @@ importers:
         version: 22.20.5
       '@vitest/coverage-v8':
         specifier: ^3.2.0
-        version: 3.2.7(supports-color@7.2.0)(vitest@3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0))
+        version: 3.2.7(supports-color@7.2.0)(vitest@3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0))
       eslint:
         specifier: ^9.0.0
         version: 9.39.5(jiti@2.7.0)(supports-color@7.2.0)
@@ -192,7 +195,7 @@ importers:
         version: 8.72.1(eslint@9.39.5(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
       vitest:
         specifier: ^3.2.0
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
+        version: 3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
 
   apps/desktop:
     dependencies:
@@ -232,7 +235,7 @@ importers:
         version: 4.3.4(vite@8.3.5(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0))
       '@testing-library/jest-dom':
         specifier: ^7.0.1
-        version: 7.0.1(@testing-library/dom@10.4.2)(vitest@3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0))
+        version: 7.0.1(@testing-library/dom@10.4.2)(vitest@3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0))
       '@testing-library/react':
         specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -283,7 +286,7 @@ importers:
         version: 8.3.5(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)
       vitest:
         specifier: ^3.2.0
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
+        version: 3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
       zustand:
         specifier: ^5.0.16
         version: 5.0.16(@types/react@19.3.0)(react@19.3.1)
@@ -299,7 +302,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.0
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
+        version: 3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
 
   packages/intake:
     dependencies:
@@ -318,13 +321,13 @@ importers:
     devDependencies:
       '@vitest/coverage-v8':
         specifier: ^3.2.0
-        version: 3.2.7(supports-color@7.2.0)(vitest@3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0))
+        version: 3.2.7(supports-color@7.2.0)(vitest@3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0))
       typescript:
         specifier: ^5.6.0
         version: 5.9.3
       vitest:
         specifier: ^3.2.0
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
+        version: 3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
 
   packages/orchestrator:
     dependencies:
@@ -352,7 +355,7 @@ importers:
     devDependencies:
       '@vitest/coverage-v8':
         specifier: ^3.2.0
-        version: 3.2.7(supports-color@7.2.0)(vitest@3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0))
+        version: 3.2.7(supports-color@7.2.0)(vitest@3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0))
       esbuild:
         specifier: ^0.28.2
         version: 0.28.2
@@ -364,7 +367,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.0
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
+        version: 3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
 
   packages/presets:
     dependencies:
@@ -377,7 +380,7 @@ importers:
     devDependencies:
       '@vitest/coverage-v8':
         specifier: ^3.2.0
-        version: 3.2.7(supports-color@7.2.0)(vitest@3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0))
+        version: 3.2.7(supports-color@7.2.0)(vitest@3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0))
       esbuild:
         specifier: ^0.28.2
         version: 0.28.2
@@ -386,7 +389,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.0
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
+        version: 3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
 
   packages/providers:
     dependencies:
@@ -405,7 +408,7 @@ importers:
         version: 30.0.0
       '@vitest/coverage-v8':
         specifier: ^3.2.0
-        version: 3.2.7(supports-color@7.2.0)(vitest@3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0))
+        version: 3.2.7(supports-color@7.2.0)(vitest@3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0))
       electron:
         specifier: ^45.2.3
         version: 45.2.3(supports-color@7.2.0)
@@ -417,7 +420,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.0
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
+        version: 3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
 
   packages/sessions:
     dependencies:
@@ -445,7 +448,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.0
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
+        version: 3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
 
   packages/slicer:
     dependencies:
@@ -458,7 +461,7 @@ importers:
     devDependencies:
       '@vitest/coverage-v8':
         specifier: ^3.2.0
-        version: 3.2.7(supports-color@7.2.0)(vitest@3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0))
+        version: 3.2.7(supports-color@7.2.0)(vitest@3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0))
       fast-check:
         specifier: ^4.0.0
         version: 4.10.2
@@ -467,7 +470,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.0
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
+        version: 3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
 
   packages/stitcher:
     dependencies:
@@ -483,13 +486,13 @@ importers:
     devDependencies:
       '@vitest/coverage-v8':
         specifier: ^3.2.0
-        version: 3.2.7(supports-color@7.2.0)(vitest@3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0))
+        version: 3.2.7(supports-color@7.2.0)(vitest@3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0))
       typescript:
         specifier: ^5.6.0
         version: 5.9.3
       vitest:
         specifier: ^3.2.0
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
+        version: 3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
 
 packages:
 
@@ -4093,7 +4096,7 @@ snapshots:
       picocolors: 1.1.1
       pretty-format: 27.5.1
 
-  '@testing-library/jest-dom@7.0.1(@testing-library/dom@10.4.2)(vitest@3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0))':
+  '@testing-library/jest-dom@7.0.1(@testing-library/dom@10.4.2)(vitest@3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0))':
     dependencies:
       '@adobe/css-tools': 4.5.0
       '@testing-library/dom': 10.4.2
@@ -4103,7 +4106,7 @@ snapshots:
       picocolors: 1.1.1
       redent: 3.0.0
     optionalDependencies:
-      vitest: 3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
+      vitest: 3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
 
   '@testing-library/react@16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
@@ -4280,7 +4283,7 @@ snapshots:
       '@rolldown/pluginutils': 1.0.1
       vite: 8.3.5(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)
 
-  '@vitest/coverage-v8@3.2.7(supports-color@7.2.0)(vitest@3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0))':
+  '@vitest/coverage-v8@3.2.7(supports-color@7.2.0)(vitest@3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0))':
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@bcoe/v8-coverage': 1.0.2
@@ -4295,7 +4298,7 @@ snapshots:
       std-env: 3.10.0
       test-exclude: 7.0.2
       tinyrainbow: 2.0.0
-      vitest: 3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
+      vitest: 3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -6034,7 +6037,7 @@ snapshots:
       fsevents: 2.3.3
       jiti: 2.7.0
 
-  vitest@3.2.7(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0):
+  vitest@3.2.7(patch_hash=210197c03d3a522d757b0a21627ab2dd6b7e5b666e56ee29a287882d99414833)(@types/debug@4.1.13)(@types/node@22.20.5)(jiti@2.7.0)(jsdom@30.1.3(@noble/hashes@1.8.0))(lightningcss@1.33.0)(supports-color@7.2.0):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/expect': 3.2.7

@@ -1,0 +1,17 @@
+diff --git a/dist/chunks/rpc.-pEldfrD.js b/dist/chunks/rpc.-pEldfrD.js
+index a48eb0174a4fbc508a36c46ff78b0f9bf7ba6295..a0bad8c974378dcc70e357f9bcf2ff9d7e251bfd 100644
+--- a/dist/chunks/rpc.-pEldfrD.js
++++ b/dist/chunks/rpc.-pEldfrD.js
+@@ -52,7 +52,11 @@ function createRuntimeRpc(options) {
+ 			if (functionName === "onUnhandledError") message += ` with "${args[0]?.message || args[0]}"`;
+ 			throw new Error(message);
+ 		},
+-		...options
++		...options,
++		// Backport of vitest#8297: the worker's task-update call must not fail after birpc's fixed 60 s. A busy
++		// worker (sharp image work) can answer later than that, and vitest 3 then turns a fully green run into an
++		// unhandled error. Vitest 4 ships this behaviour; drop the patch when upgrading.
++		timeout: -1
+ 	}));
+ 	return {
+ 		rpc,

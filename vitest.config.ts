@@ -5,7 +5,8 @@ export default defineConfig({
     passWithNoTests: true,
     environment: 'node',
     // The simulation, round-trip and adapter suites run real sharp work and can take several seconds per test.
-    testTimeout: 20_000,
+    // A loaded machine (or CI runner) can triple that, so keep enough headroom that a slow machine is not a failure.
+    testTimeout: 30_000,
     include: [
       'packages/**/test/**/*.test.{ts,tsx}',
       'packages/**/test/**/*.spec.{ts,tsx}',

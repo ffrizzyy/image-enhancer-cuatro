@@ -24,7 +24,14 @@ beforeAll(async () => {
   writeFileSync(tile, await sharp({ create: { width: 600, height: 400, channels: 3, background: '#7799bb' } }).png().toBuffer());
   writeFileSync(small, await sharp({ create: { width: 100, height: 100, channels: 3, background: '#bb9977' } }).png().toBuffer());
 });
-afterAll(() => rmSync(dir, { recursive: true, force: true }));
+afterAll(() => {
+  try {
+    // Windows can still hold the sharp-decoded files briefly; retry instead of failing the suite at teardown.
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  } catch {
+    /* the OS will clean up the temporary folder */
+  }
+});
 
 const request = (): EnhanceRequest => ({ attachments: [{ role: 'tile', path: tile }], prompt: 'x', timeoutMs: 1000 });
 const outputDir = (): string => path.join(dir, `out-${counter++}`);
