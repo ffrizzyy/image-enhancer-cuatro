@@ -73,6 +73,8 @@ export const DISCOVERY_SCRIPT = `(() => {
     fileInputs: [...document.querySelectorAll('input[type="file"]')].map((el) => describe(el, ['accept', 'multiple', 'id', 'name'])),
     editables: [...document.querySelectorAll('[contenteditable="true"], [contenteditable=""], textarea, [role="textbox"], input[type="text"]')]
       .map((el) => describe(el, ['role', 'aria-label', 'placeholder', 'data-placeholder', 'contenteditable', 'id'])),
+    // Length only (never the text): proves a configured insert reached the composer.
+    composerTextLength: editable ? (editable.value ?? editable.textContent ?? '').trim().length : null,
     controls,
     imageCount: document.images.length,
     customElements: [...customTags.values()].slice(0, 60),
@@ -86,6 +88,8 @@ export interface DiscoveryReport {
   previews: unknown[];
   fileInputs: unknown[];
   editables: unknown[];
+  /** How many characters the composer holds after a draft was typed (never the text itself). */
+  composerTextLength: number | null;
   controls: unknown[];
   imageCount: number;
   customElements: unknown[];

@@ -5,7 +5,7 @@ Captured with `pnpm --filter @ie/desktop provider-tool discover <provider>`. Str
 ## Gemini (config shipped, partly verified)
 See `packages/providers/config/gemini.json`. Two live `enhance` runs: everything verified (see the config's `_status`). The result is a blob: image (1024x683 for a 768x512 input) read back via canvas. `download gemini --chat <url>` re-tests the download on an existing chat without generating.
 
-## GPT (chatgpt.com): configured and verified (1 live generation: 768x512 in, 1536x1024 out in 42 s)
+## GPT (chatgpt.com): verified end to end (2026-11-05 and 2026-11-06)
 - Composer: `div.ProseMirror[contenteditable='true']` (`role=textbox`, label "Ask ChatGPT").
 - File inputs already exist on the idle page (no menu step needed): four hidden `input[type=file]` with dynamic ids; accepts are
   `image/*`, `image/*,video/*`, `image/*`, and unrestricted. Select by `accept`, never by id.
@@ -15,6 +15,10 @@ See `packages/providers/config/gemini.json`. Two live `enhance` runs: everything
   attachments were confirmed in the composer this way.
 - Controls seen: "Add files and more" (attach menu), "Dictate", "Temporary chat".
 - Send: `button[aria-label='Send'][type=submit]` (appears once the composer has text).
+- **The Send button ignores browser-level mouse clicks from automation (checked 2026-11-06):** a CDP
+  mousePressed/mouseReleased pair at its centre does nothing, while the element's own `click()` submits. The adapter
+  clicks, waits for the composer to clear, and only then falls back to the page's own click, so a page that did send
+  is never sent twice. A real 768x512 tile then produced 1537x1023 in 40 s (2026-11-06).
 - The session manager's readiness probe for gpt now reports `ready` (`div.ProseMirror[contenteditable='true']`).
 
 ## Grok (grok.com): configured; generation blocked by the account's image limit
@@ -23,6 +27,9 @@ See `packages/providers/config/gemini.json`. Two live `enhance` runs: everything
   GPT: `attachMode: "one-by-one"`.
 - Attachment previews are the composer's `[aria-label*='Conversation attachments' i] [role='listitem']` list, not the
   conversation's `assets.grok.com` images. The old selector counted sent pictures, so it was replaced.
+- 2026-11-06: a real job attached the tile, submitted, and opened its conversation, and then the page reported the
+  usage limit. So attach and send work; the account is still out of image generations, so `resultImage`, the download
+  and the output size stay unverified until the limit resets.
 - Attach control: `button[data-testid='attach-button']` (opens a menu), but setting the hidden input directly works.
 - A cookie banner (OneTrust) overlays the page; the discovery ignores it. A stray `<textarea>` on `body` is not the composer.
 - The readiness probe reports `ready` (`.tiptap.ProseMirror[contenteditable='true']`).

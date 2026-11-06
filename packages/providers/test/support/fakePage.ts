@@ -40,6 +40,8 @@ export interface FakePageOptions {
   extra?: readonly string[];
   /** The file input only appears after the page's menu button (`button.menu`) is clicked. */
   attachBehindMenu?: boolean;
+  /** Mouse clicks on the send button do nothing (as on ChatGPT); only the page's own click() sends. */
+  ignoresMouseClick?: boolean;
 }
 
 const IDLE = ['#prompt', 'input[type=file]', 'button.send'];
@@ -53,6 +55,8 @@ export class FakePage implements PageDriver {
   private text = '';
   private polls = 0;
   private opened = 0;
+  /** What the composer holds; cleared when the message is sent. */
+  private composer = '';
 
   constructor(private readonly o: FakePageOptions) {}
 
@@ -144,6 +148,16 @@ export class FakePage implements PageDriver {
   async insertText(selector: string, text: string): Promise<void> {
     this.log.push(`insert:${selector}:${text}`);
     this.seen.add(selector);
+    this.composer = text;
+  }
+
+  private send(): void {
+    this.composer = '';
+    // Sending clears the composer: its attachments are now part of the message, not pending in the composer.
+    this.dom.delete('.thumb');
+    // The next generation starts its own poll count; the earlier pictures stay in the conversation.
+    this.polls = 0;
+    this.show('.spinner');
   }
 
   async click(selector: string): Promise<void> {
@@ -153,11 +167,22 @@ export class FakePage implements PageDriver {
       this.show('input[type=file]');
       return;
     }
-    // Sending clears the composer: its attachments are now part of the message, not pending in the composer.
-    this.dom.delete('.thumb');
-    // The next generation starts its own poll count; the earlier pictures stay in the conversation.
-    this.polls = 0;
-    this.show('.spinner');
+    if (this.o.ignoresMouseClick && selector === 'button.send') return;
+    this.send();
+  }
+
+  async domClick(selector: string): Promise<void> {
+    this.log.push(`domClick:${selector}`);
+    this.seen.add(selector);
+    this.send();
+  }
+
+  async waitForEmpty(selector: string, timeoutMs: number): Promise<boolean> {
+    this.log.push(`waitForEmpty:${selector}`);
+    this.seen.add(selector);
+    if (this.composer.length === 0) return true;
+    this.o.clock.advance(timeoutMs);
+    return false;
   }
 
   async pageText(): Promise<string> {

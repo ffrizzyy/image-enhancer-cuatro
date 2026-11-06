@@ -26,6 +26,9 @@ export interface ElectronPageDriverOptions {
   chooserTimeoutMs?: number;
   /** Upper bound for any single page script or DevTools command that has no timeout of its own. */
   operationTimeoutMs?: number;
+  /** Extra time after a `waitFor` deadline before the page is assumed unable to answer (a navigation destroys the
+   *  in-page script). Defaults to 2 s; tests shrink it. */
+  scriptGraceMs?: number;
 }
 
 const json = JSON.stringify;
@@ -51,6 +54,7 @@ export class ElectronPageDriver implements PageDriver {
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly chooserTimeoutMs: number;
   private readonly operationTimeoutMs: number;
+  private readonly scriptGraceMs: number;
 
   /** `native` is the `WebContents` of the provider view. */
   constructor(native: unknown, options: ElectronPageDriverOptions = {}) {
@@ -58,6 +62,7 @@ export class ElectronPageDriver implements PageDriver {
     this.sleep = options.sleep ?? defaultSleep;
     this.chooserTimeoutMs = options.chooserTimeoutMs ?? 5000;
     this.operationTimeoutMs = options.operationTimeoutMs ?? 15_000;
+    this.scriptGraceMs = options.scriptGraceMs ?? 2000;
   }
 
   /** Releases the DevTools protocol session. Safe to call more than once. */
@@ -101,7 +106,14 @@ export class ElectronPageDriver implements PageDriver {
       observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
       const timer = setTimeout(() => done(false), ${Math.max(1, Math.floor(timeoutMs))});
     })`;
-    return within(this.evaluate<boolean>(script), timeoutMs + 2000, `waiting for ${selector}`);
+    return within(this.evaluate<boolean>(script), timeoutMs + this.scriptGraceMs, `waiting for ${selector}`).catch(
+      (error: unknown) => {
+        // A page that is navigating destroys the in-page observer before its timer fires. That means "not seen yet",
+        // not a failed run: the caller's own deadline decides when to give up, and its retry reads the new document.
+        if (error instanceof PageTimeoutError) return false;
+        throw error;
+      },
+    );
   }
 
   async setInputFiles(selector: string, paths: readonly string[]): Promise<void> {
@@ -170,6 +182,36 @@ export class ElectronPageDriver implements PageDriver {
     await this.cdp('Input.dispatchMouseEvent', { ...base, type: 'mouseMoved' });
     await this.cdp('Input.dispatchMouseEvent', { ...base, type: 'mousePressed' });
     await this.cdp('Input.dispatchMouseEvent', { ...base, type: 'mouseReleased' });
+  }
+
+  async domClick(selector: string): Promise<void> {
+    const clicked = await this.evaluate<boolean>(
+      `(() => { const el = document.querySelector(${json(selector)}); if (!el) return false; el.click(); return true; })()`,
+    );
+    if (!clicked) throw new Error(`No element matches ${selector}`);
+  }
+
+  /** Resolves true once the field behind `selector` is empty (or gone). A page that cannot answer counts as not empty. */
+  async waitForEmpty(selector: string, timeoutMs: number): Promise<boolean> {
+    const script = `new Promise((resolve) => {
+      const sel = ${json(selector)};
+      const empty = () => { const el = document.querySelector(sel); if (!el) return true;
+        const raw = typeof el.value === 'string' ? el.value : (el.innerText ?? el.textContent ?? '');
+        return String(raw).trim().length === 0; };
+      if (empty()) { resolve(true); return; }
+      const done = (value) => { observer.disconnect(); clearTimeout(timer); resolve(value); };
+      const observer = new MutationObserver(() => { if (empty()) done(true); });
+      observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true });
+      const timer = setTimeout(() => done(false), ${Math.max(1, Math.floor(timeoutMs))});
+    })`;
+    return within(this.evaluate<boolean>(script), timeoutMs + this.scriptGraceMs, `waiting for ${selector} to clear`).catch(
+      async (error: unknown) => {
+        if (!(error instanceof PageTimeoutError)) throw error;
+        // The in-page observer dies if the page navigates mid-wait. A composer that is gone means the message left;
+        // one that is still there means it did not.
+        return (await this.count(selector)) === 0;
+      },
+    );
   }
 
   async pageText(): Promise<string> {

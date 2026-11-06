@@ -66,6 +66,9 @@ export class ChatPageSim extends JsdomContents {
   private send(): void {
     if (this.sent || this.attachedCount === 0) return;
     this.sent = true;
+    // Sending takes the draft out of the composer, which the adapter watches to confirm the message left.
+    const composer = this.dom.window.document.querySelector('[contenteditable="true"]');
+    if (composer) composer.textContent = '';
     this.append(this.spec.generating);
     if (this.scenario === 'timeout') return;
     setTimeout(() => {

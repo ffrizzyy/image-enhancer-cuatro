@@ -54,6 +54,38 @@ describe('waitFor (DOM mutation observation)', () => {
     expect(await driver.waitFor('.never', 60)).toBe(false);
     expect(await driver.waitFor('[[[', 60)).toBe(false);
   });
+
+  it('resolves false when the page cannot answer, so a caller can look again', async () => {
+    const contents = new JsdomContents(SIMPLE);
+    contents.scriptHangs = true;
+    const driver = new ElectronPageDriver(contents, { sleep: async () => {}, scriptGraceMs: 30, operationTimeoutMs: 200 });
+
+    expect(await driver.waitFor('.send', 20)).toBe(false);
+  });
+});
+
+describe('domClick and waitForEmpty', () => {
+  it('runs the element own click, and fails when nothing matches', async () => {
+    const contents = new JsdomContents(page('<button id="go"></button>'));
+    let clicked = 0;
+    contents.mutate((d) => d.getElementById('go')!.addEventListener('click', () => clicked++));
+    const driver = driverFor(contents);
+
+    await driver.domClick('#go');
+    expect(clicked).toBe(1);
+    await expect(driver.domClick('#missing')).rejects.toThrow(/No element matches #missing/);
+  });
+
+  it('resolves true once the composer empties, and false at the timeout', async () => {
+    const contents = new JsdomContents(page('<div id="composer" contenteditable="true">draft</div>'));
+    const driver = new ElectronPageDriver(contents, { sleep: async () => {}, scriptGraceMs: 40 });
+
+    expect(await driver.waitForEmpty('#composer', 30)).toBe(false);
+    contents.mutate((d) => {
+      d.getElementById('composer')!.textContent = '';
+    });
+    expect(await driver.waitForEmpty('#composer', 500)).toBe(true);
+  });
 });
 
 describe('goto', () => {

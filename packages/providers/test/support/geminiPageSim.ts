@@ -63,6 +63,9 @@ export class GeminiPageSim extends JsdomContents {
   private send(): void {
     if (this.sent || this.attachedCount === 0) return;
     this.sent = true;
+    // Sending takes the draft out of the composer, which the adapter watches to confirm the message left.
+    const composer = this.dom.window.document.querySelector('.ql-editor');
+    if (composer) composer.textContent = '';
     this.append(fixture('generating.html'));
     if (this.scenario === 'timeout') return;
 

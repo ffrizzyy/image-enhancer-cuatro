@@ -48,6 +48,8 @@ const defaultSleep = (ms: number): Promise<void> => new Promise((resolve) => set
 
 /** Pause between re-checks when a wait returned but its condition is not met yet. */
 const POLL_PAUSE_MS = 250;
+/** How long to watch the composer after pressing send, before deciding the message did not leave. */
+const SUBMIT_CONFIRM_MS = 5000;
 
 /**
  * The shared chat-UI flow: open a chat (or reuse one), attach, paste the prompt, submit, wait for the image,
@@ -138,7 +140,7 @@ export class WebAdapter implements ProviderAdapter {
 
       await this.attach(req, deadline, baseline.thumbnails);
       await this.enterPrompt(req.prompt);
-      await this.submit();
+      await this.submit(deadline);
       await this.waitForImage(deadline, baseline.images);
       const image = await this.download(deadline);
       return { ...image, elapsedMs: this.now() - started };
@@ -266,8 +268,22 @@ export class WebAdapter implements ProviderAdapter {
     await this.pause();
   }
 
-  private async submit(): Promise<void> {
-    await this.driver.click(await this.requireMatch('submitButton'));
+  private async submit(deadline: number): Promise<void> {
+    const button = await this.requireMatch('submitButton');
+    const composer = await this.requireMatch('promptInput');
+    const confirmMs = Math.min(SUBMIT_CONFIRM_MS, this.remaining(deadline, 'sending the message'));
+
+    await this.driver.click(button);
+    if (await this.driver.waitForEmpty(composer, confirmMs)) return;
+
+    // ChatGPT ignores browser-level pointer events from automation, so its Send button does nothing; the page's own
+    // click handler still runs. Only fall back when the message visibly stayed in the composer, so a page that did
+    // send is never sent twice.
+    await this.driver.domClick(button);
+    if (await this.driver.waitForEmpty(composer, confirmMs)) return;
+    throw new ProviderError('ui-changed', `${MESSAGES['ui-changed']} The message stayed in the composer after send.`, {
+      selector: 'submitButton',
+    });
   }
 
   private async waitForImage(deadline: number, baselineImages: number): Promise<void> {

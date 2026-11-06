@@ -37,6 +37,10 @@ export interface PageDriver {
   /** Inserts text in one step (clipboard-style), not key by key. */
   insertText(selector: string, text: string): Promise<void>;
   click(selector: string): Promise<void>;
+  /** Runs the element's own `click()` in the page, for UIs that ignore browser-level pointer events. */
+  domClick(selector: string): Promise<void>;
+  /** Resolves true as soon as the text behind `selector` is empty (or the element is gone), false on timeout. */
+  waitForEmpty(selector: string, timeoutMs: number): Promise<boolean>;
   /** The page's visible text, for state markers. */
   pageText(): Promise<string>;
   /**

@@ -34,6 +34,8 @@ export class JsdomContents implements DriverContents {
   loadError: Error | null = null;
   /** When true, `loadURL` never settles. */
   loadHangs = false;
+  /** When true, page scripts never answer (as when a navigation destroys them mid-call). */
+  scriptHangs = false;
   /** When true, a click on an upload control opens the (intercepted) file chooser. */
   chooserOpensOnClick = true;
   /** Layout for elements (jsdom has none): selector -> box. */
@@ -100,6 +102,7 @@ export class JsdomContents implements DriverContents {
   }
 
   executeJavaScript(code: string): Promise<unknown> {
+    if (this.scriptHangs) return new Promise(() => {});
     try {
       return Promise.resolve(this.dom.window.eval(code));
     } catch (error) {

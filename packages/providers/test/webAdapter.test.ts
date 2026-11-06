@@ -79,6 +79,8 @@ function staticDriver(text: string, present: readonly string[] = [], over: Parti
     setInputFiles: async () => {},
     insertText: async () => {},
     click: async () => {},
+    domClick: async () => {},
+    waitForEmpty: async () => true,
     pageText: async () => text,
     fetchImage: async () => big,
     ...over,
@@ -119,6 +121,25 @@ describe('the normal flow', () => {
 
     expect(result).toMatchObject({ width: 1024, height: 1024 });
     expect(result.imagePath).toMatch(/result-001\.png$/);
+  });
+
+  it('falls back to the page\'s own click when a mouse click leaves the message in the composer', async () => {
+    const { adapter, page } = setup({ page: { ignoresMouseClick: true } });
+    await adapter.enhance(request());
+
+    expect(page.log).toContain('click:button.send');
+    expect(page.log).toContain('domClick:button.send');
+    expect(page.log.indexOf('click:button.send')).toBeLessThan(page.log.indexOf('domClick:button.send'));
+  });
+
+  it('reports a message that never leaves the composer instead of waiting for an image', async () => {
+    const { adapter, page } = setup({ page: { ignoresMouseClick: true } });
+    page.domClick = async () => {}; // the fallback does nothing either
+
+    const error = await adapter.enhance(request()).then(() => null, (e: unknown) => e);
+    expect(error).toBeInstanceOf(ProviderError);
+    expect((error as ProviderError).kind).toBe('ui-changed');
+    expect((error as ProviderError).message).toContain('stayed in the composer');
   });
 
   it('reports elapsed time from the clock', async () => {
