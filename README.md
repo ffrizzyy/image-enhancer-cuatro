@@ -76,6 +76,11 @@ Everything is in the app's data folder (**Settings -> Open data folder**; on Win
 
 Nothing is deleted automatically. **Settings -> Clear job data** removes all jobs after a confirmation.
 
+## License
+
+This repository is public so the code can be viewed, but it is **not open source**. No licence is granted: you may
+not copy, modify, redistribute or use the code without the author's written permission. All rights reserved.
+
 ## Project layout
 
 `apps/desktop` (Electron main, preload, React renderer) and `packages/` for contracts, presets, intake, slicer, stitcher,
