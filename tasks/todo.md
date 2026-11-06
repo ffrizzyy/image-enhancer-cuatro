@@ -90,7 +90,7 @@ Parallel tracks: slicer (T14–T16), providers (T17–T19), stitcher (T20–T22)
 
 - [ ] **T33** Gemini adapter — deps: T19, T17
 - [ ] **T34** Grok adapter — deps: T19, T17
-- [ ] **T35** Settings: template overrides, pacing presets, data folder, browser note — deps: T10, T8
+- [x] **T35** Settings: template overrides, pacing presets, data folder, browser note — deps: T10, T8 (manual restart check of an override still to do by hand)
 - [ ] **T36** E2E, accessibility, and release hardening — deps: T28, T30, T32, T33, T34, T35
 
 ### Checkpoint F — after T33–T36

@@ -90,7 +90,7 @@ describe('Settings screen', () => {
     await openSettings();
     expect(screen.getByText(/built-in browser/i)).toBeInTheDocument();
     expect(screen.getByText(/never opens your system default browser/i)).toBeInTheDocument();
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /browser/i })).not.toBeInTheDocument(); // the category select in the template editor is not a browser picker
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/browser/i)).not.toBeInTheDocument();
   });
@@ -179,5 +179,43 @@ describe('Settings: pacing and notice', () => {
 
     await user.click(screen.getByRole('button', { name: 'Read the notice again' }));
     expect(screen.getByText(/terms of service/i)).toBeInTheDocument();
+  });
+});
+
+describe('Settings: templates and data', () => {
+  it('edits a template, shows a validation error, and resets', async () => {
+    const user = userEvent.setup();
+    const bridge = installBridge({ settings: acknowledgedSettings });
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: 'Settings' }));
+
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Category' }), 'env-realistic');
+    const prompt = screen.getByRole('textbox', { name: 'Default prompt' });
+    await user.clear(prompt);
+    await user.type(prompt, 'My default');
+
+    bridge.saveOverride.mockResolvedValueOnce({ ok: false, error: { code: 'invalid_request', message: 'template must contain {{userPrompt}}' } });
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('template must contain');
+    expect(bridge.saveOverride).toHaveBeenCalledWith(expect.objectContaining({ categoryId: 'env-realistic', defaultPrompt: 'My default' }));
+
+    expect(screen.getByRole('button', { name: 'Reset to default' })).toBeDisabled(); // nothing is stored yet
+  });
+
+  it('opens the data folder, and treats a cancelled clear as no error', async () => {
+    const user = userEvent.setup();
+    const bridge = installBridge({ settings: acknowledgedSettings });
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: 'Settings' }));
+
+    await user.click(await screen.findByRole('button', { name: 'Open data folder' }));
+    expect(bridge.openDataFolder).toHaveBeenCalled();
+
+    bridge.clearJobs.mockResolvedValueOnce({ ok: false, error: { code: 'cancelled', message: 'Nothing was deleted.' } });
+    await user.click(screen.getByRole('button', { name: /Clear job data/ }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Clear job data/ }));
+    expect(await screen.findByText('Removed 2 jobs.')).toBeInTheDocument();
   });
 });

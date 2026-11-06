@@ -359,6 +359,12 @@ export interface IpcContract {
   'sessions.clear': { request: { providerId: ProviderId }; response: { cleared: boolean } };
   'presets.list': { request: void; response: Category[] };
   'presets.get': { request: { categoryId: string }; response: Category };
+  'presets.overrides': { request: void; response: string[] };
+  'presets.shipped': { request: { categoryId: string }; response: Category };
+  'presets.saveOverride': { request: { categoryId: string; template?: string | undefined; defaultPrompt?: string | undefined }; response: Category };
+  'presets.resetOverride': { request: { categoryId: string }; response: Category };
+  'data.openFolder': { request: void; response: { path: string } };
+  'data.clearJobs': { request: void; response: { removed: number } };
   'presets.suggestCategory': {
     request: { assetId: string; prompt: string };
     response: CategorySuggestion;

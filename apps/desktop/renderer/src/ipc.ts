@@ -47,6 +47,14 @@ export const ipc = {
   presets: {
     list: () => window.ie.presets.list(),
     suggestCategory: (request: Parameters<IeApi['presets']['suggestCategory']>[0]) => window.ie.presets.suggestCategory(request),
+    overrides: () => window.ie.presets.overrides(),
+    shipped: (categoryId: string) => window.ie.presets.shipped(categoryId),
+    saveOverride: (request: Parameters<IeApi['presets']['saveOverride']>[0]) => window.ie.presets.saveOverride(request),
+    resetOverride: (categoryId: string) => window.ie.presets.resetOverride(categoryId),
+  },
+  data: {
+    openFolder: () => window.ie.data.openFolder(),
+    clearJobs: () => window.ie.data.clearJobs(),
   },
   files: {
     pathFor: (file: File) => window.ie.files.pathFor(file),

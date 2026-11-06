@@ -194,6 +194,16 @@ describe('review: a tile the provider could not get right', () => {
     for (const i of [0, 2, 3]) expect({ state: after[i]!.state, outputPath: after[i]!.outputPath }).toEqual(before[i]);
   });
 
+  it('clearAll removes finished jobs and their files, and refuses while a job is running', async () => {
+    const h = harness({});
+    h.service.register(job());
+    await h.service.start('J1');
+    await settle(h);
+    expect(h.service.get('J1').state).toBe('done');
+    await expect(h.service.clearAll()).resolves.toBe(1);
+    expect(h.store.listJobs()).toHaveLength(0);
+  });
+
   it('can be tried again repeatedly and still be accepted as is at the end', async () => {
     const h = harness({ bad: [0] });
     h.service.register(job());

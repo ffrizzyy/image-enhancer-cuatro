@@ -53,6 +53,14 @@ export interface IeApi {
     list(): Promise<IpcResult<IpcResponse<'presets.list'>>>;
     /** Local, offline category suggestion for an imported image; never calls a provider. */
     suggestCategory(request: IpcRequest<'presets.suggestCategory'>): Promise<IpcResult<IpcResponse<'presets.suggestCategory'>>>;
+    overrides(): Promise<IpcResult<IpcResponse<'presets.overrides'>>>;
+    shipped(categoryId: string): Promise<IpcResult<IpcResponse<'presets.shipped'>>>;
+    saveOverride(request: IpcRequest<'presets.saveOverride'>): Promise<IpcResult<IpcResponse<'presets.saveOverride'>>>;
+    resetOverride(categoryId: string): Promise<IpcResult<IpcResponse<'presets.resetOverride'>>>;
+  };
+  data: {
+    openFolder(): Promise<IpcResult<IpcResponse<'data.openFolder'>>>;
+    clearJobs(): Promise<IpcResult<IpcResponse<'data.clearJobs'>>>;
   };
   files: {
     /** Absolute path of a dropped or picked File (the renderer cannot read `File.path`). */
@@ -119,6 +127,14 @@ const api: IeApi = {
   presets: {
     list: () => invoke('presets.list'),
     suggestCategory: (request) => invoke('presets.suggestCategory', request),
+    overrides: () => invoke('presets.overrides'),
+    shipped: (categoryId) => invoke('presets.shipped', { categoryId }),
+    saveOverride: (request) => invoke('presets.saveOverride', request),
+    resetOverride: (categoryId) => invoke('presets.resetOverride', { categoryId }),
+  },
+  data: {
+    openFolder: () => invoke('data.openFolder'),
+    clearJobs: () => invoke('data.clearJobs'),
   },
   files: {
     pathFor: (file) => webUtils.getPathForFile(file),

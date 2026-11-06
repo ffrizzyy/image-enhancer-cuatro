@@ -15,10 +15,11 @@ import {
 } from '@ie/sessions';
 import { createElectronBackend } from '@ie/sessions/electron';
 import { getFeatures } from '@ie/intake';
+import { configureOverrides } from '@ie/presets';
 import { openStore, PACING_PRESETS } from '@ie/orchestrator';
 import { createGeminiAdapter, createGptAdapter, createGrokAdapter, createImageSaver, type ProviderAdapter } from '@ie/providers';
 import { ElectronPageDriver } from '@ie/providers/electron';
-import { app, BrowserWindow, dialog, ipcMain, session, type WebContents } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, session, shell, type WebContents } from 'electron';
 import sharp from 'sharp';
 
 import { handleAppPing, ipcError } from './ipc/app.js';
@@ -38,6 +39,7 @@ import {
   handleJobsSetTileOverride,
   handleJobsTileThumbnail,
 } from './ipc/jobs.js';
+import { handleDataClearJobs, handleDataOpenFolder, handlePresetsOverrides, handlePresetsResetOverride, handlePresetsSaveOverride, handlePresetsShipped, type DataDeps } from './ipc/data.js';
 import { handlePresetsList, handlePresetsSuggest } from './ipc/presets.js';
 import { handleSessionsClear, handleSessionsOpen, handleSessionsStatus } from './ipc/sessions.js';
 import { handleSettingsGet, handleSettingsSet } from './ipc/settings.js';
@@ -121,6 +123,8 @@ function registerIpc(): void {
 
   // Jobs: saved in a database in the data folder, run in the background, reported to the window as events.
   const userData = app.getPath('userData');
+  // The person's template edits live here; the shipped catalog files are never written.
+  configureOverrides(path.join(userData, 'overrides'));
   const send = (channel: string, payload: unknown): void => {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, payload);
   };
@@ -168,6 +172,29 @@ function registerIpc(): void {
   ipcMain.handle('intake.preview', (_event, payload: unknown) => handleIntakePreview(payload, assets));
   ipcMain.handle('slicer.plan', (_event, payload: unknown) => handleSlicerPlan(payload, assets));
   ipcMain.handle('presets.list', () => handlePresetsList());
+  ipcMain.handle('presets.overrides', () => handlePresetsOverrides());
+  ipcMain.handle('presets.shipped', (_event, payload: unknown) => handlePresetsShipped(payload));
+  ipcMain.handle('presets.saveOverride', (_event, payload: unknown) => handlePresetsSaveOverride(payload));
+  ipcMain.handle('presets.resetOverride', (_event, payload: unknown) => handlePresetsResetOverride(payload));
+  const dataDeps: DataDeps = {
+    dataFolder: () => userData,
+    openFolder: (folder) => shell.openPath(folder),
+    confirmClear: async () => {
+      const options = {
+        type: 'warning' as const,
+        buttons: ['Delete all job data', 'Keep it'],
+        defaultId: 1,
+        cancelId: 1,
+        message: 'Delete all job data?',
+        detail: 'Every job, its tiles and its finished pictures will be removed. Pictures you already saved elsewhere are not touched. This cannot be undone.',
+      };
+      const result = mainWindow ? await dialog.showMessageBox(mainWindow, options) : await dialog.showMessageBox(options);
+      return result.response === 0;
+    },
+    clearJobs: () => jobs.clearAll(),
+  };
+  ipcMain.handle('data.openFolder', () => handleDataOpenFolder(dataDeps));
+  ipcMain.handle('data.clearJobs', () => handleDataClearJobs(dataDeps));
   const featuresDir = path.join(app.getPath('userData'), 'features');
   ipcMain.handle('presets.suggestCategory', (_event, payload: unknown) =>
     handlePresetsSuggest(payload, {

@@ -72,6 +72,8 @@ export interface JobService {
   resume(jobId: string): Promise<JobProgress>;
   cancel(jobId: string): JobProgress;
   /** Review: keeps a tile that was set aside exactly as its best attempt came back. */
+  /** Deletes every job and its files. Refuses while any job is running or stitching. Returns how many were removed. */
+  clearAll(): Promise<number>;
   acceptTile(jobId: string, index: number): JobProgress;
   /** Review: queues a tile to be generated again (with a fresh set of retries) and carries on with the job. */
   rerunTile(jobId: string, index: number): Promise<JobProgress>;
@@ -299,6 +301,18 @@ export function createJobService(deps: JobServiceDeps): JobService {
       clearTimer(jobId);
       running.get(jobId)?.abort.abort();
       return progressOf(jobId);
+    },
+
+    async clearAll() {
+      const jobs = store.listJobs();
+      const busy = jobs.find((record) => running.has(record.job.id) || record.state === 'running' || record.state === 'stitching' || record.state === 'preflight');
+      if (busy) throw new JobServiceError('illegal', 'A job is running. Cancel or finish it before clearing the data.');
+      for (const record of jobs) {
+        clearTimer(record.job.id);
+        store.deleteJob(record.job.id);
+        rmSync(path.join(deps.dataDir, 'jobs', record.job.id), { recursive: true, force: true });
+      }
+      return jobs.length;
     },
 
     acceptTile(jobId, index) {

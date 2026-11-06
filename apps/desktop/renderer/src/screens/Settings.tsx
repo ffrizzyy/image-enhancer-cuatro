@@ -2,6 +2,8 @@ import { ProviderStatus } from '../components/ProviderStatus';
 import { useState } from 'react';
 
 import { RiskNoticeText } from '../components/RiskNotice';
+import { TemplateEditor } from '../components/TemplateEditor';
+import { ipc } from '../ipc';
 import { PROVIDERS, useShellStore } from '../store';
 
 export function Settings() {
@@ -12,6 +14,17 @@ export function Settings() {
   const settings = useShellStore((s) => s.settings);
   const setPacingPreset = useShellStore((s) => s.setPacingPreset);
   const [showRisk, setShowRisk] = useState(false);
+  const [dataMessage, setDataMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
+
+  async function dataAction(run: () => Promise<{ ok: true; text: string } | { ok: false; code: string; text: string }>): Promise<void> {
+    try {
+      const r = await run();
+      // Cancelling the confirmation is a choice, not a failure.
+      setDataMessage(r.ok ? { kind: 'ok', text: r.text } : r.code === 'cancelled' ? null : { kind: 'error', text: r.text });
+    } catch (error) {
+      setDataMessage({ kind: 'error', text: String(error) });
+    }
+  }
 
   return (
     <>
@@ -56,6 +69,31 @@ export function Settings() {
         <p className="text-sm text-slate-600">
           Jobs, tiles and results are kept in <code className="break-all">{settings?.dataFolder ?? ''}</code> until you delete them; nothing is removed automatically.
         </p>
+        <div className="mt-2 flex gap-2">
+          <button
+            type="button"
+            className="rounded border border-slate-300 px-3 py-1 text-sm"
+            onClick={() => void dataAction(async () => { const r = await ipc.data.openFolder(); return r.ok ? { ok: true, text: 'Opened the data folder.' } : { ok: false, code: r.error.code, text: r.error.message }; })}
+          >
+            Open data folder
+          </button>
+          <button
+            type="button"
+            className="rounded border border-red-300 px-3 py-1 text-sm text-red-800"
+            onClick={() => void dataAction(async () => { const r = await ipc.data.clearJobs(); return r.ok ? { ok: true, text: `Removed ${r.value.removed} job${r.value.removed === 1 ? '' : 's'}.` } : { ok: false, code: r.error.code, text: r.error.message }; })}
+          >
+            Clear job data&hellip;
+          </button>
+        </div>
+        {dataMessage && (
+          <p role={dataMessage.kind === 'error' ? 'alert' : 'status'} className={`mt-2 text-sm ${dataMessage.kind === 'error' ? 'text-red-800' : 'text-green-800'}`}>
+            {dataMessage.text}
+          </p>
+        )}
+      </section>
+      <section aria-labelledby="templates-heading" className="mt-8">
+        <h2 id="templates-heading" className="mb-2 text-base font-semibold">Prompt templates</h2>
+        <TemplateEditor />
       </section>
       <section aria-labelledby="risk-heading" className="mt-8">
         <h2 id="risk-heading" className="mb-2 text-base font-semibold">Risk notice</h2>

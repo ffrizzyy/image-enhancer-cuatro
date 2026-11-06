@@ -447,6 +447,15 @@ export const ipcSchemas = {
     request: z.object({ categoryId: z.string().min(1) }),
     response: CategorySchema,
   },
+  'presets.overrides': { request: voidRequest, response: z.array(z.string()) },
+  'presets.shipped': { request: z.object({ categoryId: z.string().min(1) }), response: CategorySchema },
+  'presets.saveOverride': {
+    request: z.object({ categoryId: z.string().min(1), template: z.string().max(8000).optional(), defaultPrompt: z.string().max(2000).optional() }),
+    response: CategorySchema,
+  },
+  'presets.resetOverride': { request: z.object({ categoryId: z.string().min(1) }), response: CategorySchema },
+  'data.openFolder': { request: voidRequest, response: z.object({ path: z.string() }) },
+  'data.clearJobs': { request: voidRequest, response: z.object({ removed: z.number().int().min(0) }) },
   'presets.suggestCategory': {
     request: z.object({ assetId: id, prompt: z.string().max(2000) }),
     response: CategorySuggestionSchema,

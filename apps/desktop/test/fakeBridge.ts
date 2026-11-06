@@ -45,6 +45,11 @@ export function installBridge(overrides: { settings?: AppSettings } = {}) {
     finishReview: vi.fn(),
     saveExport: vi.fn(),
     listPresets: vi.fn(),
+    presetOverrides: vi.fn(),
+    saveOverride: vi.fn(),
+    resetOverride: vi.fn(),
+    openDataFolder: vi.fn(),
+    clearJobs: vi.fn(),
     suggest: vi.fn(),
     pathFor: vi.fn(),
     open: vi.fn(),
@@ -68,6 +73,9 @@ export function installBridge(overrides: { settings?: AppSettings } = {}) {
     value: { providerId, partition: `persist:${providerId}`, visible },
   }));
   bridge.listPresets.mockResolvedValue({ ok: true, value: listCategories() });
+  bridge.presetOverrides.mockResolvedValue({ ok: true, value: [] });
+  bridge.openDataFolder.mockResolvedValue({ ok: true, value: { path: '/data' } });
+  bridge.clearJobs.mockResolvedValue({ ok: true, value: { removed: 2 } });
   bridge.suggest.mockResolvedValue({
     ok: true,
     value: {
@@ -135,7 +143,8 @@ export function installBridge(overrides: { settings?: AppSettings } = {}) {
         return () => logListeners.delete(listener);
       },
     },
-    presets: { list: bridge.listPresets, suggestCategory: bridge.suggest },
+    presets: { list: bridge.listPresets, suggestCategory: bridge.suggest, overrides: bridge.presetOverrides, shipped: vi.fn(), saveOverride: bridge.saveOverride, resetOverride: bridge.resetOverride },
+    data: { openFolder: bridge.openDataFolder, clearJobs: bridge.clearJobs },
     export: { save: bridge.saveExport },
     files: { pathFor: bridge.pathFor },
     sessions: {
