@@ -1,7 +1,6 @@
 import path from 'node:path';
 
 import sharp from 'sharp';
-import { describe, expect, it } from 'vitest';
 
 import { createGptAdapter, createGrokAdapter, createImageSaver, loadProviderConfig } from '../src';
 import { ElectronPageDriver } from '../src/electron';
