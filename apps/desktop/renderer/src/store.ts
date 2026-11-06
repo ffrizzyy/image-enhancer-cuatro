@@ -8,10 +8,12 @@ import {
   type ImagePreview,
   type Job,
   type JobProgress,
+  type JobResultView,
   type JobSummary,
   type ProviderId,
   type SessionStatus,
   type TilePlan,
+  type TileOverridePatch,
 } from '@ie/contracts';
 import { create } from 'zustand';
 
@@ -57,12 +59,21 @@ export interface PreviewState extends ImagePreview {
   assetId: string;
 }
 
+/** The Result screen's current picture; loaded from the main process when a job finishes or is stitched again. */
+export type ResultState =
+  | { status: 'idle' }
+  | { status: 'loading'; jobId: string }
+  | { status: 'ok'; jobId: string; result: JobResultView }
+  | { status: 'error'; jobId: string; message: string };
+
 /** Incremented whenever a detection starts or is cancelled, so a late response never overwrites newer state. */
 let detectionRun = 0;
 /** The same guard for plan requests, which are made on every change of the grid fields. */
 let planRun = 0;
 /** And for cost requests. */
 let costRun = 0;
+/** And for result loads, so a slow load for a job the person left never replaces the current one. */
+let resultRun = 0;
 
 export const ROUTE_IDS = ['home', 'setup', 'run', 'result', 'settings'] as const;
 export type RouteId = (typeof ROUTE_IDS)[number];
@@ -117,6 +128,8 @@ interface ShellState {
   jobLog: Record<string, string[]>;
   /** A problem with a run action (start, pause, resume, cancel), in plain words. */
   runError: string | null;
+  /** The stitched picture for the Result screen. */
+  result: ResultState;
   navigate: (route: RouteId) => void;
   loadPing: () => Promise<void>;
   importFile: (file: File) => Promise<void>;
@@ -161,13 +174,17 @@ interface ShellState {
   resumeJob: (jobId: string) => Promise<void>;
   cancelJob: (jobId: string) => Promise<void>;
   /** Review: keep a tile that was set aside exactly as its best attempt came back. */
-  acceptTile: (jobId: string, index: number) => Promise<void>;
+  acceptTile: (jobId: string, index: number) => Promise<boolean>;
   /** Review: generate a tile again, with a fresh set of retries. */
-  rerunTile: (jobId: string, index: number) => Promise<void>;
+  rerunTile: (jobId: string, index: number) => Promise<boolean>;
+  /** Change one tile's own prompt or source picture before it is run again. */
+  setTileOverride: (jobId: string, index: number, patch: TileOverridePatch) => Promise<boolean>;
   /** Review: keep every tile that was set aside as it is. */
   acceptAllReview: (jobId: string) => Promise<void>;
   /** Review: every tile is settled, so put the picture together. */
   finishReview: (jobId: string) => Promise<void>;
+  /** Loads the stitched picture and its metrics for the Result screen. */
+  loadResult: (jobId: string) => Promise<void>;
 }
 
 /** How many activity lines are kept per job. */
@@ -206,6 +223,7 @@ export const useShellStore = create<ShellState>((set, get) => ({
   progress: {},
   jobLog: {},
   runError: null,
+  result: { status: 'idle' },
   navigate: (route) => set({ route }),
   loadPing: async () => {
     set({ ping: { status: 'loading' } });
@@ -507,20 +525,45 @@ export const useShellStore = create<ShellState>((set, get) => ({
     set({ runError: null });
     try {
       const result = await ipc.jobs.acceptTile(jobId, index);
-      if (result.ok) set((state) => ({ progress: { ...state.progress, [jobId]: result.value } }));
-      else set({ runError: result.error.message });
+      if (result.ok) {
+        set((state) => ({ progress: { ...state.progress, [jobId]: result.value } }));
+        return true;
+      }
+      set({ runError: result.error.message });
+      return false;
     } catch (error) {
       set({ runError: `Could not accept the tile: ${String(error)}` });
+      return false;
     }
   },
   rerunTile: async (jobId, index) => {
     set({ runError: null });
     try {
       const result = await ipc.jobs.rerunTile(jobId, index);
-      if (result.ok) set((state) => ({ progress: { ...state.progress, [jobId]: result.value } }));
-      else set({ runError: result.error.message });
+      if (result.ok) {
+        set((state) => ({ progress: { ...state.progress, [jobId]: result.value } }));
+        return true;
+      }
+      set({ runError: result.error.message });
+      return false;
     } catch (error) {
       set({ runError: `Could not re-run the tile: ${String(error)}` });
+      return false;
+    }
+  },
+  setTileOverride: async (jobId, index, patch) => {
+    set({ runError: null });
+    try {
+      const result = await ipc.jobs.setTileOverride(jobId, index, patch);
+      if (result.ok) {
+        set((state) => ({ progress: { ...state.progress, [jobId]: result.value } }));
+        return true;
+      }
+      set({ runError: result.error.message });
+      return false;
+    } catch (error) {
+      set({ runError: `Could not change the tile: ${String(error)}` });
+      return false;
     }
   },
   acceptAllReview: async (jobId) => {
@@ -535,6 +578,17 @@ export const useShellStore = create<ShellState>((set, get) => ({
       else set({ runError: result.error.message });
     } catch (error) {
       set({ runError: `Could not put the picture together: ${String(error)}` });
+    }
+  },
+  loadResult: async (jobId) => {
+    const run = ++resultRun;
+    set({ result: { status: 'loading', jobId } });
+    try {
+      const result = await ipc.jobs.result({ jobId, maxSide: 4096 });
+      if (run !== resultRun) return;
+      set(result.ok ? { result: { status: 'ok', jobId, result: result.value } } : { result: { status: 'error', jobId, message: result.error.message } });
+    } catch (error) {
+      if (run === resultRun) set({ result: { status: 'error', jobId, message: `The picture could not be loaded: ${String(error)}` } });
     }
   },
   cancelJob: async (jobId) => {

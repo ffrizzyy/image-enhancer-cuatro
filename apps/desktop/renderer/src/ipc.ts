@@ -33,11 +33,16 @@ export const ipc = {
     listRecent: (limit?: number) => window.ie.jobs.listRecent(limit),
     acceptTile: (jobId: string, index: number) => window.ie.jobs.acceptTile(jobId, index),
     rerunTile: (jobId: string, index: number) => window.ie.jobs.rerunTile(jobId, index),
+    setTileOverride: (jobId: string, index: number, patch: Parameters<IeApi['jobs']['setTileOverride']>[2]) => window.ie.jobs.setTileOverride(jobId, index, patch),
+    result: (request: Parameters<IeApi['jobs']['result']>[0]) => window.ie.jobs.result(request),
     finishReview: (jobId: string) => window.ie.jobs.finishReview(jobId),
     costPreview: (request: Parameters<IeApi['jobs']['costPreview']>[0]) => window.ie.jobs.costPreview(request),
     tileThumbnail: (request: Parameters<IeApi['jobs']['tileThumbnail']>[0]) => window.ie.jobs.tileThumbnail(request),
     onProgress: (listener: Parameters<IeApi['jobs']['onProgress']>[0]) => window.ie.jobs.onProgress(listener),
     onLog: (listener: Parameters<IeApi['jobs']['onLog']>[0]) => window.ie.jobs.onLog(listener),
+  },
+  export: {
+    save: (request: Parameters<IeApi['export']['save']>[0]) => window.ie.export.save(request),
   },
   presets: {
     list: () => window.ie.presets.list(),

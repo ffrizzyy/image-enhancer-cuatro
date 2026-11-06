@@ -1,7 +1,7 @@
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
-import type { CostPreview, Job, JobProgress, JobSummary, Pacing, ProviderId, SessionStatus, ImagePreview } from '@ie/contracts';
+import type { CostPreview, ExportRequest, ExportResult, Job, JobProgress, JobResultView, JobSummary, Pacing, ProviderId, SessionStatus, ImagePreview, TileOverridePatch } from '@ie/contracts';
 import {
   applyJobEvent,
   applyTileEvent,
@@ -21,6 +21,7 @@ import {
 } from '@ie/orchestrator';
 import type { ProviderAdapter } from '@ie/providers';
 import { planTiles } from '@ie/slicer';
+import { exportImage } from '@ie/stitcher';
 import sharp from 'sharp';
 
 export type JobServiceErrorCode = 'not-found' | 'conflict' | 'invalid' | 'illegal';
@@ -73,6 +74,12 @@ export interface JobService {
   acceptTile(jobId: string, index: number): JobProgress;
   /** Review: queues a tile to be generated again (with a fresh set of retries) and carries on with the job. */
   rerunTile(jobId: string, index: number): Promise<JobProgress>;
+  /** Changes one tile's own prompt or source picture, ready for the next run of that tile. */
+  setTileOverride(jobId: string, index: number, patch: TileOverridePatch): Promise<JobProgress>;
+  /** The stitched picture and its metrics, as pictures the renderer can draw. */
+  result(jobId: string, maxSide?: number): Promise<JobResultView>;
+  /** Writes the finished picture in the chosen format; the caller resolves the destination (the save dialog). */
+  save(request: ExportRequest): Promise<ExportResult>;
   /** Review: every tile is settled, so the picture is put together. */
   finishReview(jobId: string): Promise<JobProgress>;
   /** Tell the service a provider's session status changed: a job paused for a check or login resumes once it is `ready`. */
@@ -92,6 +99,21 @@ export interface JobService {
 }
 
 const DEFAULT_THUMBNAIL_PX = 256;
+/**
+ * The largest preview `jobs.result` accepts. The Result screen compares at up to 400%, so a small preview would be
+ * visibly blurry there; the contract's upper bound is the right default.
+ */
+const DEFAULT_RESULT_PREVIEW_PX = 4096;
+
+/** A downscaled JPEG of a file on disk, as a data URL the renderer can draw. */
+async function previewImage(file: string, maxSide: number): Promise<ImagePreview> {
+  const { data, info } = await sharp(file)
+    .resize({ width: maxSide, height: maxSide, fit: 'inside', withoutEnlargement: true })
+    // 4:4:4 keeps the colour detail (thin lines and edges) that a before/after comparison needs to be readable.
+    .jpeg({ quality: 92, chromaSubsampling: '4:4:4' })
+    .toBuffer({ resolveWithObject: true });
+  return { dataUrl: `data:image/jpeg;base64,${data.toString('base64')}`, width: info.width, height: info.height };
+}
 
 export function createJobService(deps: JobServiceDeps): JobService {
   const { store } = deps;
@@ -297,6 +319,97 @@ export function createJobService(deps: JobServiceDeps): JobService {
       return progressOf(jobId);
     },
 
+    async setTileOverride(jobId, index, patch) {
+      const record = store.getJob(jobId);
+      if (!record) throw new JobServiceError('not-found', 'That job no longer exists.');
+      const tile = store.getTile(jobId, index);
+      if (!tile) throw new JobServiceError('not-found', 'That tile does not exist.');
+      if (record.state === 'failed' || record.state === 'cancelled') throw new JobServiceError('illegal', `A job that is ${record.state} cannot change a tile.`);
+      if (tile.state === 'running') throw new JobServiceError('illegal', 'This tile is being generated right now. Wait for it to finish, then change it.');
+
+      const planTile = record.plan.tiles[index];
+      if (!planTile) throw new JobServiceError('not-found', 'That tile does not exist.');
+
+      let prompt = tile.promptOverride;
+      if (patch.prompt !== undefined) {
+        const trimmed = patch.prompt?.trim() ?? '';
+        if (trimmed.length > 2000) throw new JobServiceError('invalid', 'A tile prompt can be at most 2000 characters.');
+        prompt = trimmed.length > 0 ? trimmed : null;
+      }
+
+      let sourceOverride = tile.sourceOverride;
+      if (patch.sourcePath !== undefined) {
+        if (patch.sourcePath) {
+          const dir = path.join(deps.dataDir, 'jobs', jobId, 'tiles');
+          mkdirSync(dir, { recursive: true });
+          const target = path.join(dir, `tile-${String(index).padStart(3, '0')}-source.png`);
+          try {
+            await sharp(patch.sourcePath)
+              .rotate()
+              .resize({ width: planTile.send.width, height: planTile.send.height, fit: 'fill' })
+              .png()
+              .toFile(target);
+          } catch (error) {
+            throw new JobServiceError('invalid', `That picture could not be used for tile ${index + 1}: ${error instanceof Error ? error.message : String(error)}`);
+          }
+          sourceOverride = target;
+        } else {
+          if (sourceOverride) rmSync(sourceOverride, { force: true });
+          sourceOverride = null;
+        }
+      }
+
+      store.transaction(() => {
+        store.updateTile(jobId, index, { promptOverride: prompt, sourceOverride });
+        const changed = [
+          patch.prompt !== undefined ? 'prompt' : null,
+          patch.sourcePath !== undefined ? 'source picture' : null,
+        ].filter((part): part is string => part !== null);
+        store.addEvent(jobId, 'info', `Tile ${index + 1}: its ${changed.join(' and ')} changed for the next run.`);
+      });
+      return progressOf(jobId);
+    },
+
+    async result(jobId, maxSide = DEFAULT_RESULT_PREVIEW_PX) {
+      const record = store.getJob(jobId);
+      if (!record) throw new JobServiceError('not-found', 'That job no longer exists.');
+      if (!record.result) throw new JobServiceError('illegal', 'The picture has not been put together yet.');
+      try {
+        const [sourcePreview, preview] = await Promise.all([
+          previewImage(record.job.source.path, maxSide),
+          previewImage(record.result.imagePath, maxSide),
+        ]);
+        return {
+          jobId,
+          ...record.result,
+          width: record.plan.source.width,
+          height: record.plan.source.height,
+          plan: record.plan,
+          sourcePreview,
+          preview,
+        };
+      } catch (error) {
+        throw new JobServiceError('not-found', `The picture is no longer available on disk: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    },
+
+    async save(request) {
+      if (!request.destination) throw new JobServiceError('invalid', 'A place to save the picture is required.');
+      // Only a picture the app itself produced can be exported, so this channel cannot be used to read arbitrary files.
+      const record = store.listJobs().find((candidate) => candidate.result?.imagePath === request.imagePath);
+      if (!record) throw new JobServiceError('not-found', 'That picture is not a saved job result.');
+      try {
+        return await exportImage({
+          imagePath: request.imagePath,
+          destination: request.destination,
+          format: request.format,
+          ...(request.quality !== undefined ? { quality: request.quality } : {}),
+        });
+      } catch (error) {
+        throw new JobServiceError('invalid', `The picture could not be saved: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    },
+
     async finishReview(jobId) {
       const record = store.getJob(jobId);
       if (!record) throw new JobServiceError('not-found', 'That job no longer exists.');
@@ -322,8 +435,8 @@ export function createJobService(deps: JobServiceDeps): JobService {
     async tileThumbnail(jobId, index, maxSide = DEFAULT_THUMBNAIL_PX) {
       const tile = store.getTile(jobId, index);
       if (!tile) throw new JobServiceError('not-found', 'That tile does not exist.');
-      // The tile's output when it has one, otherwise the piece of the picture it will be made from.
-      const source = tile.outputPath ?? path.join(deps.dataDir, 'jobs', jobId, 'tiles', `tile-${String(index).padStart(3, '0')}.png`);
+      // The tile's output when it has one, otherwise the piece of the picture it will be made from (or its own source).
+      const source = tile.outputPath ?? tile.sourceOverride ?? path.join(deps.dataDir, 'jobs', jobId, 'tiles', `tile-${String(index).padStart(3, '0')}.png`);
       try {
         const { data, info } = await sharp(source).resize({ width: maxSide, height: maxSide, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 75 }).toBuffer({ resolveWithObject: true });
         return { dataUrl: `data:image/jpeg;base64,${data.toString('base64')}`, width: info.width, height: info.height };

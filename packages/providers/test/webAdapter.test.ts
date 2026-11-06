@@ -18,7 +18,13 @@ beforeAll(async () => {
   dir = mkdtempSync(path.join(tmpdir(), 'ie-webadapter-'));
   big = await sharp({ create: { width: 1024, height: 1024, channels: 3, background: '#335577' } }).png().toBuffer();
 });
-afterAll(() => rmSync(dir, { recursive: true, force: true }));
+afterAll(() => {
+  try {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  } catch {
+    /* the OS will clean up the temporary folder */
+  }
+});
 
 const request = (over: Partial<EnhanceRequest> = {}): EnhanceRequest => ({
   attachments: [{ role: 'tile', path: 'C:/tmp/tile.png' }],
@@ -32,6 +38,7 @@ interface SetupOptions {
   page?: Partial<FakePageOptions>;
   config?: Partial<ProviderConfig>;
   random?: () => number;
+  reuseChat?: boolean;
 }
 
 function setup(o: SetupOptions = {}) {
@@ -49,6 +56,7 @@ function setup(o: SetupOptions = {}) {
     random: o.random ?? (() => 0.5),
     now: clock.now,
     pollMs: 1000,
+    ...(o.reuseChat ? { reuseChat: true } : {}),
   });
   return { adapter, page, clock, sleeps };
 }
@@ -126,6 +134,32 @@ describe('the normal flow', () => {
     await adapter.enhance(request());
     expect(page.newChats).toBe(2);
     expect(page.log.filter((l) => l.startsWith('goto:'))).toHaveLength(2);
+  });
+
+  it('reuses one chat for every call when asked, without interleaving concurrent requests', async () => {
+    const { adapter, page } = setup({ reuseChat: true });
+    await adapter.enhance(request());
+    await adapter.enhance(request());
+
+    expect(page.newChats).toBe(1);
+    expect(page.log.filter((l) => l.startsWith('goto:'))).toHaveLength(1);
+    // Each request is attached, prompted, sent and downloaded before the next one starts.
+    const firstFetch = page.log.findIndex((l) => l.startsWith('fetch'));
+    const secondAttach = page.log.findIndex((l, i) => i > firstFetch && l.startsWith('setFiles'));
+    expect(firstFetch).toBeGreaterThan(-1);
+    expect(secondAttach).toBeGreaterThan(firstFetch);
+
+    await Promise.all([adapter.enhance(request()), adapter.enhance(request())]);
+    expect(page.newChats).toBe(1);
+  });
+
+  it('does not mistake the previous tile’s picture in a reused chat for the new one', async () => {
+    const { adapter, page } = setup({ reuseChat: true, page: { resultAfterPolls: 2 } });
+    await adapter.enhance(request());
+    expect(page.resultImages).toBe(1);
+    await adapter.enhance(request());
+    expect(page.resultImages).toBe(2);
+    expect(page.newChats).toBe(1);
   });
 
   it('waits for the spinner to go even after the image first appears', async () => {

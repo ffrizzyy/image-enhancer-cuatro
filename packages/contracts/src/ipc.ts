@@ -331,6 +331,10 @@ export const StitchResultSchema = z.object({
   flagged: z.array(z.number().int().min(0)),
 });
 
+export const StitchedResultSchema = StitchResultSchema.extend({
+  stitchedAt: isoDate,
+});
+
 export const StitchInputSchema = z.object({
   plan: TilePlanSchema,
   tiles: z.array(z.object({ index: z.number().int().min(0), path })),
@@ -375,6 +379,8 @@ export const TileProgressSchema = z.object({
   errorKind: ProviderErrorKindSchema.optional(),
   note: z.string().max(4000).optional(),
   attempts: z.number().int().min(0),
+  promptOverride: z.string().max(2000).optional(),
+  sourceOverride: path.optional(),
 });
 
 export const JobProgressSchema = z.object({
@@ -384,10 +390,21 @@ export const JobProgressSchema = z.object({
   resumeAfter: isoDate.optional(),
   error: z.string().max(4000).optional(),
   providerId: ProviderIdSchema.optional(),
+  prompt: z.string().max(2000).optional(),
   grid: GridSchema.optional(),
+  result: StitchedResultSchema.optional(),
   completedTiles: z.number().int().min(0),
   totalTiles: z.number().int().min(0),
   tiles: z.array(TileProgressSchema),
+});
+
+export const JobResultViewSchema = StitchedResultSchema.extend({
+  jobId: id,
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  plan: TilePlanSchema,
+  sourcePreview: ImagePreviewSchema,
+  preview: ImagePreviewSchema,
 });
 
 export const JobSummarySchema = z.object({
@@ -462,6 +479,19 @@ export const ipcSchemas = {
   'jobs.rerunTile': {
     request: z.object({ jobId: id, index: z.number().int().min(0) }),
     response: JobProgressSchema,
+  },
+  'jobs.setTileOverride': {
+    request: z.object({
+      jobId: id,
+      index: z.number().int().min(0),
+      prompt: z.string().max(2000).nullable().optional(),
+      sourcePath: path.nullable().optional(),
+    }),
+    response: JobProgressSchema,
+  },
+  'jobs.result': {
+    request: z.object({ jobId: id, maxSide: z.number().int().min(256).max(4096).optional() }),
+    response: JobResultViewSchema,
   },
   'jobs.finishReview': {
     request: z.object({ jobId: id }),

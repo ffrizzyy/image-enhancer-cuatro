@@ -18,6 +18,8 @@ function tileProgress(store: Store, jobId: string, tile: TileRecord): TileProgre
     ...(tile.outputPath ? { outputPath: tile.outputPath } : {}),
     ...(errorKind && tile.state !== 'accepted' ? { errorKind } : {}),
     ...(tile.note ? { note: tile.note } : {}),
+    ...(tile.promptOverride ? { promptOverride: tile.promptOverride } : {}),
+    ...(tile.sourceOverride ? { sourceOverride: tile.sourceOverride } : {}),
   };
 }
 
@@ -30,10 +32,12 @@ export function jobProgress(store: Store, jobId: string): JobProgress | null {
     jobId,
     state: record.state,
     providerId: record.job.providerId,
+    prompt: record.job.prompt,
     grid: { rows: record.plan.grid.rows, cols: record.plan.grid.cols },
     ...(record.pauseReason ? { pauseReason: record.pauseReason } : {}),
     ...(record.resumeAfter ? { resumeAfter: record.resumeAfter } : {}),
     ...(record.error ? { error: record.error } : {}),
+    ...(record.result ? { result: record.result } : {}),
     completedTiles: tiles.filter(isCompleted).length,
     totalTiles: tiles.length,
     tiles: tiles.map((t) => tileProgress(store, jobId, t)),

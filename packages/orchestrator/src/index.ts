@@ -11,6 +11,7 @@ export type {
   StoreChange,
   StoreErrorCode,
   StoreOptions,
+  StoredJobResult,
   TilePatch,
   TileRecord,
 } from './store.ts';

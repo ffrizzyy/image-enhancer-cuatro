@@ -179,7 +179,8 @@ export class ElectronPageDriver implements PageDriver {
   async fetchImage(selector: string, timeoutMs: number, options: FetchImageOptions = {}): Promise<Uint8Array> {
     const rewrites = (options.urlRewrites ?? []).map((r) => ({ pattern: r.pattern, replacement: r.replacement }));
     const script = `(async () => {
-      const img = document.querySelector(${json(selector)});
+      const images = document.querySelectorAll(${json(selector)});
+      const img = images[images.length - 1];
       if (!img) throw new Error('image element not found');
       let url = img.currentSrc || img.src || img.getAttribute('src');
       if (!url) throw new Error('image has no URL');

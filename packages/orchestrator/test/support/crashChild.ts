@@ -29,3 +29,9 @@ if (mode === 'hold') {
   });
   store.close();
 }
+
+if (mode === 'open') {
+  // Only opens the database (running the migrations) and exits, at the same time as other such processes.
+  store.close();
+  console.log('OPEN');
+}

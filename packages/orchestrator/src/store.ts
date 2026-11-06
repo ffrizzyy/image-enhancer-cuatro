@@ -28,7 +28,17 @@ export interface JobRecord {
   resumeAfter: string | null;
   /** Why the job failed. */
   error: string | null;
+  /** The stitched picture and its metrics, once there is one. */
+  result: StoredJobResult | null;
   updatedAt: string;
+}
+
+/** What the stitcher reported, as it is kept for the Result screen. */
+export interface StoredJobResult {
+  imagePath: string;
+  metrics: { seamScore: number; maxDeltaE: number };
+  flagged: number[];
+  stitchedAt: string;
 }
 
 export interface TileRecord {
@@ -41,6 +51,8 @@ export interface TileRecord {
   attemptBase: number;
   outputPath: string | null;
   promptOverride: string | null;
+  /** A picture used instead of this tile's slice of the job source. */
+  sourceOverride: string | null;
   note: string | null;
   updatedAt: string;
 }
@@ -85,6 +97,7 @@ export interface TilePatch {
   attemptBase?: number;
   outputPath?: string | null;
   promptOverride?: string | null;
+  sourceOverride?: string | null;
   note?: string | null;
 }
 
@@ -129,6 +142,8 @@ export interface Store {
   listJobs(filter?: { states?: readonly JobState[]; limit?: number }): JobRecord[];
   /** Sets the state, clearing the pause reason, resume time and error unless given, and logs the change. */
   setJobState(id: string, state: JobState, change?: JobStateChange): JobRecord;
+  /** Keeps the stitched picture and its metrics, and logs that it was put together. */
+  setJobResult(id: string, result: StoredJobResult): JobRecord;
   listTiles(jobId: string): TileRecord[];
   getTile(jobId: string, index: number): TileRecord | null;
   updateTile(jobId: string, index: number, patch: TilePatch): TileRecord;
@@ -180,8 +195,25 @@ function toJobRecord(row: Row): JobRecord {
     pauseReason: (row.pause_reason as PauseReason | null) ?? null,
     resumeAfter: asNullableString(row.resume_after),
     error: asNullableString(row.error),
+    result: toStoredResult(row),
     updatedAt: asString(row.updated_at),
   };
+}
+
+function toStoredResult(row: Row): StoredJobResult | null {
+  const imagePath = asNullableString(row.stitched_path);
+  const stitchedAt = asNullableString(row.stitched_at);
+  const seamScore = asNullableNumber(row.seam_score);
+  const maxDeltaE = asNullableNumber(row.max_delta_e);
+  if (!imagePath || !stitchedAt || seamScore === null || maxDeltaE === null) return null;
+  let flagged: number[] = [];
+  try {
+    const parsed = row.flagged_json === null || row.flagged_json === undefined ? [] : (JSON.parse(asString(row.flagged_json)) as unknown);
+    if (Array.isArray(parsed)) flagged = parsed.filter((n): n is number => Number.isInteger(n));
+  } catch {
+    /* a damaged list of flagged tiles is no reason to lose the picture */
+  }
+  return { imagePath, metrics: { seamScore, maxDeltaE }, flagged, stitchedAt };
 }
 
 const toTileRecord = (row: Row): TileRecord => ({
@@ -192,6 +224,7 @@ const toTileRecord = (row: Row): TileRecord => ({
   attemptBase: Number(row.attempt_base),
   outputPath: asNullableString(row.output_path),
   promptOverride: asNullableString(row.prompt_override),
+  sourceOverride: asNullableString(row.source_override),
   note: asNullableString(row.note),
   updatedAt: asString(row.updated_at),
 });
@@ -219,18 +252,37 @@ const toEventRecord = (row: Row): EventRecord => ({
   data: row.data_json === null || row.data_json === undefined ? undefined : JSON.parse(asString(row.data_json)),
 });
 
-/** Brings the database up to the latest schema, once, inside a transaction. */
+/**
+ * Brings the database up to the latest schema, once, inside a transaction.
+ *
+ * `user_version` is read *inside* the write transaction, not before it: two processes may open the same database at
+ * the same time (the app and the simulation CLI, say). The second one blocks on `BEGIN IMMEDIATE` until the first has
+ * committed and then has to see the new version, or it would try to create the same tables again and fail.
+ */
 function migrate(db: DatabaseSync): void {
-  const current = Number((db.prepare('PRAGMA user_version').get() as Row).user_version);
   const latest = MIGRATIONS[MIGRATIONS.length - 1]!.version;
-  if (current > latest) {
-    throw new StoreError('newer-schema', `This database is from a newer version of the app (schema ${current}; this one understands ${latest}).`);
+  const before = Number((db.prepare('PRAGMA user_version').get() as Row).user_version);
+  if (before > latest) {
+    throw new StoreError('newer-schema', `This database is from a newer version of the app (schema ${before}; this one understands ${latest}).`);
   }
-  for (const migration of MIGRATIONS.filter((m) => m.version > current)) {
+  // A reader on an up-to-date database must never take the write lock: another process may be holding it, and reads
+  // have to keep working. Only a database that still needs a migration needs the exclusive transaction below.
+  if (before === latest) return;
+
+  for (;;) {
     db.exec('BEGIN IMMEDIATE');
     try {
-      db.exec(migration.sql);
-      db.exec(`PRAGMA user_version = ${migration.version}`);
+      const current = Number((db.prepare('PRAGMA user_version').get() as Row).user_version);
+      if (current > latest) {
+        throw new StoreError('newer-schema', `This database is from a newer version of the app (schema ${current}; this one understands ${latest}).`);
+      }
+      const next = MIGRATIONS.find((m) => m.version > current);
+      if (!next) {
+        db.exec('COMMIT');
+        return;
+      }
+      db.exec(next.sql);
+      db.exec(`PRAGMA user_version = ${next.version}`);
       db.exec('COMMIT');
     } catch (error) {
       db.exec('ROLLBACK');
@@ -369,6 +421,24 @@ export function openStore(path: string, options: StoreOptions = {}): Store {
       });
     },
 
+    setJobResult(id, result) {
+      return transaction(() => {
+        requireJob(id);
+        run(
+          'UPDATE jobs SET stitched_path = ?, seam_score = ?, max_delta_e = ?, flagged_json = ?, stitched_at = ?, updated_at = ? WHERE id = ?',
+          result.imagePath,
+          result.metrics.seamScore,
+          result.metrics.maxDeltaE,
+          JSON.stringify(result.flagged),
+          result.stitchedAt,
+          stamp(),
+          id,
+        );
+        addEvent(id, 'info', `Picture put together (seam score ${result.metrics.seamScore.toFixed(2)}, ${result.flagged.length} tile${result.flagged.length === 1 ? '' : 's'} flagged)`);
+        return requireJob(id);
+      });
+    },
+
     listTiles: (jobId) => all('SELECT * FROM tiles WHERE job_id = ? ORDER BY idx', jobId).map(toTileRecord),
 
     getTile: (jobId, index) => {
@@ -384,9 +454,10 @@ export function openStore(path: string, options: StoreOptions = {}): Store {
           attemptBase: patch.attemptBase ?? before.attemptBase,
           outputPath: patch.outputPath === undefined ? before.outputPath : patch.outputPath,
           promptOverride: patch.promptOverride === undefined ? before.promptOverride : patch.promptOverride,
+          sourceOverride: patch.sourceOverride === undefined ? before.sourceOverride : patch.sourceOverride,
           note: patch.note === undefined ? before.note : patch.note,
         };
-        run('UPDATE tiles SET state = ?, attempt_base = ?, output_path = ?, prompt_override = ?, note = ?, updated_at = ? WHERE job_id = ? AND idx = ?', next.state, next.attemptBase, next.outputPath, next.promptOverride, next.note, stamp(), jobId, index);
+        run('UPDATE tiles SET state = ?, attempt_base = ?, output_path = ?, prompt_override = ?, source_override = ?, note = ?, updated_at = ? WHERE job_id = ? AND idx = ?', next.state, next.attemptBase, next.outputPath, next.promptOverride, next.sourceOverride, next.note, stamp(), jobId, index);
         touch(jobId);
         if (next.state !== before.state) addEvent(jobId, 'info', `Tile ${index + 1}: ${before.state} → ${next.state}`);
         return requireTile(jobId, index);

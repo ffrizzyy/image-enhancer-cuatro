@@ -6,10 +6,14 @@ import type { ProviderView, SessionBackend } from './types';
 export function createElectronBackend(): SessionBackend {
   return {
     createView(partition, { visible }): ProviderView {
-      const win = new BrowserWindow({ show: visible, width: 1000, height: 800 });
+      const win = new BrowserWindow({ show: visible, width: 1000, height: 800, webPreferences: { backgroundThrottling: false } });
       const view = new WebContentsView({
-        webPreferences: { partition, contextIsolation: true, nodeIntegration: false, sandbox: true },
+        webPreferences: { partition, contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false },
       });
+      // A hidden provider window must keep generating and polling at full speed: Chromium throttles timers (and can
+      // pause rendering work) in hidden windows, which otherwise made a job look stuck until the window was opened.
+      win.webContents.setBackgroundThrottling(false);
+      view.webContents.setBackgroundThrottling(false);
       win.contentView.addChildView(view);
 
       const fit = () => {

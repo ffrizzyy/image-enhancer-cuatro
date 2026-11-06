@@ -60,6 +60,11 @@ export class FakePage implements PageDriver {
     return this.opened;
   }
 
+  /** How many result pictures are on the page; a reused chat keeps the earlier ones. */
+  get resultImages(): number {
+    return this.dom.get('img.result') ?? 0;
+  }
+
   private show(...selectors: string[]): void {
     for (const s of selectors) if (!this.o.missing?.includes(s)) this.dom.set(s, (this.dom.get(s) ?? 0) + 1);
   }
@@ -148,6 +153,10 @@ export class FakePage implements PageDriver {
       this.show('input[type=file]');
       return;
     }
+    // Sending clears the composer: its attachments are now part of the message, not pending in the composer.
+    this.dom.delete('.thumb');
+    // The next generation starts its own poll count; the earlier pictures stay in the conversation.
+    this.polls = 0;
     this.show('.spinner');
   }
 

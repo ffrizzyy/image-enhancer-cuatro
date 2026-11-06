@@ -31,7 +31,14 @@ let root: string;
 beforeAll(() => {
   root = mkdtempSync(path.join(tmpdir(), 'ie-orch-controls-'));
 });
-afterAll(() => rmSync(root, { recursive: true, force: true }));
+afterAll(() => {
+  // A killed child can keep a handle on the temp folder for a moment on Windows; cleanup must not fail the suite.
+  try {
+    rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  } catch {
+    /* the OS will clean up the temporary folder */
+  }
+});
 
 const stores: Store[] = [];
 afterEach(() => stores.splice(0).forEach((s) => s.close()));
@@ -274,7 +281,13 @@ describe('kill the process mid-run, then restart (a real process)', () => {
       banner: { js: "import { createRequire as __cr } from 'node:module'; const require = __cr(import.meta.url);" },
     });
   });
-  afterAll(() => rmSync(path.dirname(bundle), { recursive: true, force: true }));
+  afterAll(() => {
+    try {
+      rmSync(path.dirname(bundle), { recursive: true, force: true });
+    } catch {
+      /* the OS will clean up the temporary folder */
+    }
+  });
 
   it('keeps finished tiles, queues the cut-off one again, and finishes without redoing any accepted tile', async () => {
     const dir = path.join(root, 'kill');

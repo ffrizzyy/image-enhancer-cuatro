@@ -56,7 +56,9 @@ export async function runTile(deps: TileRunDeps, jobId: string, index: number): 
 
   const accepted = new Map(store.listTiles(jobId).filter((t) => t.state === 'accepted' && t.outputPath).map((t) => [t.index, t.outputPath!]));
   const stripPath = deps.chained ? await neighbourStrip(record.plan, files, index, accepted) : null;
-  const attachments = buildAttachments({ tilePath: files.tilePath(index), referencePath: files.referencePath, stripPath }, adapter.capabilities.maxAttachments);
+  // A tile the person gave its own picture uses that, already prepared at the tile's `send` size.
+  const sourceTilePath = before.sourceOverride ?? files.tilePath(index);
+  const attachments = buildAttachments({ tilePath: sourceTilePath, referencePath: files.referencePath, stripPath }, adapter.capabilities.maxAttachments);
   const prompt = buildTilePrompt({
     category,
     userPrompt: before.promptOverride ?? record.job.prompt,
@@ -121,7 +123,7 @@ export async function runTile(deps: TileRunDeps, jobId: string, index: number): 
   const kept = path.join(files.outputsDir, `tile-${String(index).padStart(3, '0')}-try${attempt.n}.png`);
   copyFileSync(result.imagePath, kept);
 
-  const verdict = await evaluateOutput({ outputPath: kept, sourceTile: await loadRgba(files.tilePath(index)), send: tile.send, fidelity: category.fidelity });
+  const verdict = await evaluateOutput({ outputPath: kept, sourceTile: await loadRgba(sourceTilePath), send: tile.send, fidelity: category.fidelity });
   const elapsedMs = result.elapsedMs;
 
   if (verdict.accepted) {

@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -9,7 +9,14 @@ import { FakeAdapter, type FailureMode } from '@ie/providers/fake';
 import sharp from 'sharp';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
-import { handleJobsAcceptTile, handleJobsFinishReview, handleJobsRerunTile } from '../main/ipc/jobs.js';
+import {
+  handleJobsAcceptTile,
+  handleJobsFinishReview,
+  handleJobsRerunTile,
+  handleJobsResult,
+  handleJobsSetTileOverride,
+} from '../main/ipc/jobs.js';
+import { handleExportSave } from '../main/ipc/export.js';
 import { createJobService, type JobService } from '../main/jobService.js';
 
 let root: string;
@@ -21,20 +28,30 @@ beforeAll(async () => {
   for (let y = 0; y < 400; y++) for (let x = 0; x < 800; x++) data.set([128 + 90 * Math.sin(x / 31), 110 + 70 * Math.cos(y / 23), 120 + 60 * Math.sin((x + y) / 41)], (y * 800 + x) * 3);
   await sharp(data, { raw: { width: 800, height: 400, channels: 3 } }).png().toFile(source);
 });
-afterAll(() => rmSync(root, { recursive: true, force: true }));
+afterAll(() => {
+  try {
+    rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  } catch {
+    /* the OS will clean up the temporary folder */
+  }
+});
 
 const stores: Store[] = [];
 afterEach(() => stores.splice(0).forEach((s) => s.close()));
 
 /** An adapter that returns a picture unrelated to the tile for chosen tiles (so the quality gate sets them aside). */
 class Picky implements ProviderAdapter {
+  /** Every request it was given, so a test can see which prompt and pictures were used. */
+  readonly requests: EnhanceRequest[] = [];
   constructor(private readonly inner: FakeAdapter, private readonly badTiles: Set<number>, private readonly outDir: string) {}
   get id() { return this.inner.id; }
   get capabilities() { return this.inner.capabilities; }
   health() { return this.inner.health(); }
   async enhance(req: EnhanceRequest) {
+    this.requests.push(req);
     const tilePath = req.attachments.find((a) => a.role === 'tile')!.path;
-    const tile = Number(/tile-(\d+)\.png$/.exec(tilePath)![1]);
+    const match = /tile-(\d+)(?:-source)?\.png$/.exec(tilePath);
+    const tile = match ? Number(match[1]) : -1;
     if (!this.badTiles.has(tile)) return this.inner.enhance(req);
     mkdirSync(this.outDir, { recursive: true });
     const out = path.join(this.outDir, `bad-${tile}-${Date.now()}-${Math.random().toString(36).slice(2)}.png`);
@@ -57,6 +74,7 @@ interface H {
   logs: string[];
   status: { value: SessionStatus };
   fake: FakeAdapter;
+  adapter: Picky;
 }
 
 function harness(options: { modes?: FailureMode[]; bad?: number[]; autoResume?: { settleMs?: number; maxInARow?: number } } = {}): H {
@@ -85,7 +103,7 @@ function harness(options: { modes?: FailureMode[]; bad?: number[]; autoResume?: 
     ...(options.autoResume ? { autoResume: options.autoResume } : {}),
   });
   hooks.service = service;
-  return { service, store, bad, shown, restored, logs, status, fake };
+  return { service, store, bad, shown, restored, logs, status, fake, adapter };
 }
 
 const job = (id = 'J1', cols = 4): Job => ({
@@ -227,6 +245,127 @@ describe('review: a tile the provider could not get right', () => {
     expect(await handleJobsFinishReview({ jobId: 'J1' }, h.service)).toMatchObject({ ok: true });
     await settle(h);
     expect(await handleJobsFinishReview(undefined, h.service)).toMatchObject({ ok: false });
+  });
+});
+
+describe('per-tile overrides and the Result screen', () => {
+  it('keeps the stitched picture and its metrics, and serves previews over IPC', async () => {
+    const h = harness();
+    h.service.register(job());
+    await expect(h.service.result('J1')).rejects.toMatchObject({ code: 'illegal', message: expect.stringMatching(/not been put together/) });
+
+    await h.service.start('J1');
+    await settle(h);
+    const result = await h.service.result('J1', 512);
+    expect(result).toMatchObject({ jobId: 'J1', width: 800, height: 400 });
+    expect(result.plan.tiles).toHaveLength(4);
+    expect(result.preview.dataUrl).toMatch(/^data:image\/jpeg;base64,/);
+    expect(result.sourcePreview.dataUrl).toMatch(/^data:image\/jpeg;base64,/);
+    expect(Math.max(result.preview.width, result.preview.height)).toBeLessThanOrEqual(512);
+    expect(result.metrics.seamScore).toBeGreaterThan(0);
+    expect(Number.isNaN(Date.parse(result.stitchedAt))).toBe(false);
+    expect(h.service.get('J1').result).toMatchObject({ stitchedAt: result.stitchedAt, flagged: result.flagged });
+
+    const viaIpc = await handleJobsResult({ jobId: 'J1', maxSide: 512 }, h.service);
+    expect(viaIpc).toMatchObject({ ok: true, value: { jobId: 'J1', stitchedAt: result.stitchedAt } });
+    expect(await handleJobsResult({ jobId: 'J1', maxSide: 10 }, h.service)).toMatchObject({ ok: false, error: { code: 'invalid_request' } });
+    expect(await handleJobsResult({ jobId: 'nope' }, h.service)).toMatchObject({ ok: false, error: { code: 'invalid_request', message: expect.stringMatching(/no longer exists/) } });
+  });
+
+  it('exports the stitched picture through the save handler', async () => {
+    const h = harness();
+    h.service.register(job());
+    await h.service.start('J1');
+    await settle(h);
+
+    const imagePath = h.service.get('J1').result!.imagePath;
+    const destination = path.join(root, `export-${++n}.jpg`);
+    expect(await handleExportSave({ imagePath, format: 'jpeg', quality: 80 }, h.service, async () => destination)).toMatchObject({
+      ok: true,
+      value: { path: destination },
+    });
+    const meta = await sharp(destination).metadata();
+    expect(meta.format).toBe('jpeg');
+    expect([meta.width, meta.height]).toEqual([800, 400]);
+
+    // Cancelling the save dialog is reported as a cancellation, not an error.
+    expect(await handleExportSave({ imagePath, format: 'png' }, h.service, async () => null)).toMatchObject({
+      ok: false,
+      error: { code: 'cancelled' },
+    });
+
+    // Only a picture this app produced can be exported.
+    expect(await handleExportSave({ imagePath: source, format: 'png' }, h.service, async () => path.join(root, 'nope.png'))).toMatchObject({
+      ok: false,
+      error: { code: 'invalid_request' },
+    });
+  });
+
+  it('keeps a tile’s own prompt and uses it the next time that tile runs', async () => {    const h = harness();
+    h.service.register(job());
+    await h.service.start('J1');
+    await settle(h);
+
+    const changed = await h.service.setTileOverride('J1', 1, { prompt: '  Keep this part matte and desaturated.  ' });
+    expect(changed.tiles[1]!.promptOverride).toBe('Keep this part matte and desaturated.');
+    expect(h.store.getTile('J1', 1)!.promptOverride).toBe('Keep this part matte and desaturated.');
+
+    const callsBefore = h.fake.calls;
+    await h.service.rerunTile('J1', 1);
+    await settle(h);
+    expect(h.fake.calls).toBe(callsBefore + 1);
+    const last = h.adapter.requests.at(-1)!;
+    expect(last.prompt).toContain('Keep this part matte and desaturated.');
+    expect(last.prompt).not.toContain('Enhance this tile.');
+
+    // An empty prompt goes back to the job's own prompt.
+    const cleared = await h.service.setTileOverride('J1', 1, { prompt: '' });
+    expect(cleared.tiles[1]!.promptOverride).toBeUndefined();
+    expect(h.store.getTile('J1', 1)!.promptOverride).toBeNull();
+  });
+
+  it('prepares, uses and clears a tile’s own source picture', async () => {
+    const h = harness();
+    h.service.register(job());
+    await h.service.start('J1');
+    await settle(h);
+
+    const replacement = path.join(root, `replacement-${++n}.png`);
+    await sharp({ create: { width: 90, height: 60, channels: 3, background: '#cc3366' } }).png().toFile(replacement);
+    const changed = await h.service.setTileOverride('J1', 1, { sourcePath: replacement });
+    const stored = changed.tiles[1]!.sourceOverride!;
+    expect(stored).toMatch(/tile-001-source\.png$/);
+    expect(existsSync(stored)).toBe(true);
+
+    const send = h.store.getJob('J1')!.plan.tiles[1]!.send;
+    const meta = await sharp(stored).metadata();
+    expect([meta.width, meta.height]).toEqual([send.width, send.height]);
+
+    const callsBefore = h.fake.calls;
+    await h.service.rerunTile('J1', 1);
+    await settle(h);
+    expect(h.fake.calls).toBe(callsBefore + 1);
+    const last = h.adapter.requests.at(-1)!;
+    expect(last.attachments.find((a) => a.role === 'tile')!.path).toBe(stored);
+
+    const cleared = await h.service.setTileOverride('J1', 1, { sourcePath: null });
+    expect(cleared.tiles[1]!.sourceOverride).toBeUndefined();
+    expect(existsSync(stored)).toBe(false);
+  });
+
+  it('answers override requests through IPC and refuses bad ones', async () => {
+    const h = harness();
+    h.service.register(job());
+    await h.service.start('J1');
+    await settle(h);
+
+    expect(await handleJobsSetTileOverride({ jobId: 'J1', index: 2, prompt: 'Warmer light.' }, h.service)).toMatchObject({ ok: true, value: { jobId: 'J1' } });
+    expect(h.service.get('J1').tiles[2]!.promptOverride).toBe('Warmer light.');
+
+    expect(await handleJobsSetTileOverride({ jobId: 'J1', index: 2, prompt: 'x'.repeat(2001) }, h.service)).toMatchObject({ ok: false, error: { code: 'invalid_request' } });
+    expect(await handleJobsSetTileOverride({ jobId: 'J1', index: -1 }, h.service)).toMatchObject({ ok: false, error: { code: 'invalid_request' } });
+    expect(await handleJobsSetTileOverride({ jobId: 'J1', index: 99, prompt: 'x' }, h.service)).toMatchObject({ ok: false, error: { code: 'invalid_request', message: expect.stringMatching(/does not exist/) } });
+    expect(await handleJobsSetTileOverride(undefined, h.service)).toMatchObject({ ok: false, error: { code: 'invalid_request' } });
   });
 });
 

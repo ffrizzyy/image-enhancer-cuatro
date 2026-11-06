@@ -242,6 +242,30 @@ export interface StitchResult {
   flagged: number[];
 }
 
+/** A picture that has been put together, with what it looked like when the stitcher last ran. */
+export interface StitchedResult extends StitchResult {
+  /** When the stitcher last wrote this picture; a re-stitch changes it. */
+  stitchedAt: string;
+}
+
+/** Everything the Result screen needs: the pictures, the metrics and the tile geometry for its overlays. */
+export interface JobResultView extends StitchedResult {
+  jobId: string;
+  width: number;
+  height: number;
+  plan: TilePlan;
+  /** The original picture, for the before side of the comparison. */
+  sourcePreview: ImagePreview;
+  /** A downscaled copy of the stitched picture, for the after side. */
+  preview: ImagePreview;
+}
+
+/** A change to one tile's own prompt or source picture. `null` goes back to the job's prompt / the sliced tile. */
+export interface TileOverridePatch {
+  prompt?: string | null | undefined;
+  sourcePath?: string | null | undefined;
+}
+
 export interface StitchInput {
   plan: TilePlan;
   tiles: Array<{ index: number; path: string }>;
@@ -287,6 +311,10 @@ export interface TileProgress {
   /** Why a tile was rejected or set aside, in plain words. */
   note?: string | undefined;
   attempts: number;
+  /** This tile's own prompt, when the person changed it; absent means the job's prompt. */
+  promptOverride?: string | undefined;
+  /** The picture this tile used instead of its slice of the job's source, when the person changed it. */
+  sourceOverride?: string | undefined;
 }
 
 export interface JobProgress {
@@ -297,8 +325,12 @@ export interface JobProgress {
   /** Why the job failed, or why the pre-run checks blocked it. */
   error?: string | undefined;
   providerId?: ProviderId | undefined;
+  /** The job's prompt, for editing one tile's prompt against it. */
+  prompt?: string | undefined;
   /** How the tiles are laid out, so the Run screen can draw them as a grid. */
   grid?: Grid | undefined;
+  /** The picture and its metrics, once the stitcher has run. */
+  result?: StitchedResult | undefined;
   completedTiles: number;
   totalTiles: number;
   tiles: TileProgress[];
@@ -343,6 +375,13 @@ export interface IpcContract {
   'jobs.acceptTile': { request: { jobId: string; index: number }; response: JobProgress };
   /** Review: queue a tile to be generated again with a fresh set of retries. */
   'jobs.rerunTile': { request: { jobId: string; index: number }; response: JobProgress };
+  /** Change one tile's prompt or source picture before it is run again. */
+  'jobs.setTileOverride': {
+    request: { jobId: string; index: number; prompt?: string | null; sourcePath?: string | null };
+    response: JobProgress;
+  };
+  /** Everything the Result screen shows: the stitched picture, its metrics, and the tile plan. */
+  'jobs.result': { request: { jobId: string; maxSide?: number }; response: JobResultView };
   /** Review: every tile is settled, so put the picture together. */
   'jobs.finishReview': { request: { jobId: string }; response: JobProgress };
   'jobs.costPreview': { request: { providerId: ProviderId; tileCount: number }; response: CostPreview };

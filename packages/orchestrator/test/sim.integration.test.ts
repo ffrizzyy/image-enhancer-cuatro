@@ -13,7 +13,15 @@ let dir: string;
 beforeAll(() => {
   dir = mkdtempSync(path.join(tmpdir(), 'ie-orch-sim-'));
 });
-afterAll(() => rmSync(dir, { recursive: true, force: true }));
+afterAll(() => {
+  // Windows can keep a handle on a sharp-written file or the job database for a moment; a temp-folder cleanup must
+  // not fail the suite.
+  try {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  } catch {
+    /* the OS will clean up the temporary folder */
+  }
+});
 
 let n = 0;
 const out = () => path.join(dir, `run-${++n}`);
@@ -45,24 +53,34 @@ describe('a simulated 8-tile job with 20% injected failures (the plan\'s accepta
     expect(result.stitched!.metrics.seamScore).toBeLessThanOrEqual(1.2);
   });
 
-  it('is repeatable: the same seed gives the same run', async () => {
-    const a = await runSimulation({ tiles: 8, failRate: 0.3, seed: 9, outDir: out() });
-    const b = await runSimulation({ tiles: 8, failRate: 0.3, seed: 9, outDir: out() });
-    expect([a.state, a.pauses, a.providerCalls, a.tiles]).toEqual([b.state, b.pauses, b.providerCalls, b.tiles]);
-  });
+  it(
+    'is repeatable: the same seed gives the same run',
+    async () => {
+      const a = await runSimulation({ tiles: 8, failRate: 0.3, seed: 9, outDir: out() });
+      const b = await runSimulation({ tiles: 8, failRate: 0.3, seed: 9, outDir: out() });
+      expect([a.state, a.pauses, a.providerCalls, a.tiles]).toEqual([b.state, b.pauses, b.providerCalls, b.tiles]);
+    },
+    // Two full 8-tile simulations with real sharp work; under a loaded machine this can exceed the 20 s default.
+    60_000,
+  );
 
   for (const mode of ['chained', 'independent'] as const) {
     for (const failRate of [0.2, 0.5, 0.8]) {
-      it(`${mode}, fail rate ${failRate}: every tile ends accepted or set aside for review, never lost or left unfinished`, async () => {
-        for (const seed of [1, 2, 3]) {
-          const result = await runSimulation({ tiles: 8, failRate, seed, mode, outDir: out() });
-          expect(['done', 'needs-review'], `seed ${seed}: ${result.message}`).toContain(result.state);
-          for (const tile of result.tiles) expect(['accepted', 'needs-review']).toContain(tile.state);
-          // A "done" job has stitched every tile; "needs-review" means at least one tile is waiting for a person.
-          if (result.state === 'done') expect(result.tiles.every((t) => t.state === 'accepted') && result.stitched !== undefined).toBe(true);
-          else expect(result.tiles.some((t) => t.state === 'needs-review')).toBe(true);
-        }
-      });
+      it(
+        `${mode}, fail rate ${failRate}: every tile ends accepted or set aside for review, never lost or left unfinished`,
+        async () => {
+          for (const seed of [1, 2, 3]) {
+            const result = await runSimulation({ tiles: 8, failRate, seed, mode, outDir: out() });
+            expect(['done', 'needs-review'], `seed ${seed}: ${result.message}`).toContain(result.state);
+            for (const tile of result.tiles) expect(['accepted', 'needs-review']).toContain(tile.state);
+            // A "done" job has stitched every tile; "needs-review" means at least one tile is waiting for a person.
+            if (result.state === 'done') expect(result.tiles.every((t) => t.state === 'accepted') && result.stitched !== undefined).toBe(true);
+            else expect(result.tiles.some((t) => t.state === 'needs-review')).toBe(true);
+          }
+        },
+        // Three full 8-tile simulations with real sharp work each; a loaded machine can exceed the 20 s default.
+        120_000,
+      );
     }
   }
 

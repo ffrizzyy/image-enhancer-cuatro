@@ -116,6 +116,7 @@ describe('jobProgress', () => {
       jobId: 'A',
       state: 'running',
       providerId: 'gemini',
+      prompt: 'Enhance this tile.',
       grid: { rows: 1, cols: 3 },
       completedTiles: 1,
       totalTiles: 3,
@@ -140,6 +141,24 @@ describe('jobProgress', () => {
     const failed = jobProgress(store, 'A')!;
     expect(failed).toMatchObject({ state: 'failed', error: 'Missing selector: submitButton' });
     expect(failed).not.toHaveProperty('pauseReason');
+  });
+
+  it('carries each tile’s own prompt and source, and the stitched result once there is one', () => {
+    const store = openStoreTracked();
+    store.createJob({ job: makeJob('A'), plan: rowPlan(2), mode: 'chained' });
+    store.updateTile('A', 1, { promptOverride: 'Keep the window matte.', sourceOverride: 'C:\\jobs\\A\\tiles\\tile-001-source.png' });
+    expect(jobProgress(store, 'A')!.tiles[1]).toMatchObject({
+      promptOverride: 'Keep the window matte.',
+      sourceOverride: 'C:\\jobs\\A\\tiles\\tile-001-source.png',
+    });
+
+    store.setJobResult('A', { imagePath: 'C:\\jobs\\A\\stitched.png', metrics: { seamScore: 1.05, maxDeltaE: 0.8 }, flagged: [1], stitchedAt: '2026-11-06T10:00:00.000Z' });
+    expect(jobProgress(store, 'A')!.result).toEqual({
+      imagePath: 'C:\\jobs\\A\\stitched.png',
+      metrics: { seamScore: 1.05, maxDeltaE: 0.8 },
+      flagged: [1],
+      stitchedAt: '2026-11-06T10:00:00.000Z',
+    });
   });
 
   it('does not report an old error on a tile that has since been accepted', () => {

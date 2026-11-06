@@ -17,7 +17,13 @@ let dir: string;
 beforeAll(() => {
   dir = mkdtempSync(path.join(tmpdir(), 'ie-orch-store-'));
 });
-afterAll(() => rmSync(dir, { recursive: true, force: true }));
+afterAll(() => {
+  try {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  } catch {
+    /* the OS will clean up the temporary folder */
+  }
+});
 
 let counter = 0;
 const dbFile = (): string => path.join(dir, `db-${++counter}`, 'jobs.sqlite');
@@ -54,6 +60,31 @@ describe('job rows', () => {
     const job = makeJob('J2', { categorySource: 'auto', categoryConfidence: 0.83, grid: { rows: 2, cols: 2, overlapPct: 12.5, wrap: true }, promptSource: 'category-default' });
     store.createJob({ job, plan: rowPlan(1), mode: 'independent' });
     expect(store.getJob('J2')!.job).toEqual(job);
+  });
+
+  it('keeps the stitched picture and its metrics, and they survive reopening the database', () => {
+    const file = dbFile();
+    const before = track(openStore(file));
+    before.createJob({ job: makeJob('J1'), plan: rowPlan(3), mode: 'chained' });
+    const saved = before.setJobResult('J1', {
+      imagePath: 'C:\\jobs\\J1\\stitched\\stitched.png',
+      metrics: { seamScore: 1.08, maxDeltaE: 1.4 },
+      flagged: [1, 2],
+      stitchedAt: '2026-11-06T09:30:00.000Z',
+    });
+    expect(saved.result).toEqual({
+      imagePath: 'C:\\jobs\\J1\\stitched\\stitched.png',
+      metrics: { seamScore: 1.08, maxDeltaE: 1.4 },
+      flagged: [1, 2],
+      stitchedAt: '2026-11-06T09:30:00.000Z',
+    });
+    expect(before.listEvents('J1').at(-1)!.message).toMatch(/Picture put together \(seam score 1\.08, 2 tiles flagged\)/);
+    before.close();
+    open.splice(open.indexOf(before), 1);
+
+    const after = track(openStore(file));
+    expect(after.getJob('J1')!.result).toEqual(saved.result);
+    expect(after.getJob('J1')!.result!.metrics.seamScore).toBeCloseTo(1.08);
   });
 
   it('refuses a duplicate id and an empty plan, leaving nothing behind', () => {
@@ -163,8 +194,11 @@ describe('tiles and attempts', () => {
     expect(store.getTile('J1', 0)).toMatchObject({ state: 'accepted', outputPath: 'C:\\out\\0.png', note: 'looks good' });
     store.updateTile('J1', 0, { promptOverride: 'Keep it matte.' });
     expect(store.getTile('J1', 0)).toMatchObject({ state: 'accepted', outputPath: 'C:\\out\\0.png', promptOverride: 'Keep it matte.' });
-    store.updateTile('J1', 0, { note: null });
+    store.updateTile('J1', 0, { sourceOverride: 'C:\\jobs\\J1\\tiles\\tile-000-source.png' });
+    expect(store.getTile('J1', 0)).toMatchObject({ sourceOverride: 'C:\\jobs\\J1\\tiles\\tile-000-source.png' });
+    store.updateTile('J1', 0, { note: null, sourceOverride: null });
     expect(store.getTile('J1', 0)!.note).toBeNull();
+    expect(store.getTile('J1', 0)!.sourceOverride).toBeNull();
   });
 
   it('logs tile state changes, not repeats', () => {
@@ -335,8 +369,33 @@ describe('crash and concurrency (real processes)', () => {
     expect(reader.listTiles('HOLD')).toHaveLength(2);
   });
 
-  it('a second writer waits for the first within the busy timeout, then succeeds', async () => {
+  it('creates the schema only once when several processes open a new database at the same time', async () => {
     const file = dbFile();
+    const children = Array.from({ length: 4 }, () =>
+      spawn(process.execPath, [child, file, 'open'], { stdio: ['ignore', 'pipe', 'pipe'] }),
+    );
+    const results = await Promise.all(
+      children.map(
+        (proc) =>
+          new Promise<{ code: number | null; stderr: string }>((resolve) => {
+            let stderr = '';
+            proc.stderr.on('data', (chunk: Buffer) => (stderr += chunk.toString()));
+            proc.on('exit', (code) => resolve({ code, stderr }));
+          }),
+      ),
+    );
+    // Every process must see the completed migration of whichever one won the race, not try to create it again.
+    for (const result of results) expect(result.stderr).toBe('');
+    expect(results.map((r) => r.code)).toEqual([0, 0, 0, 0]);
+
+    const store = track(openStore(file));
+    expect(store.listJobs()).toEqual([]);
+    const raw = new DatabaseSync(file);
+    expect((raw.prepare('PRAGMA user_version').get() as { user_version: number }).user_version).toBe(MIGRATIONS.length);
+    raw.close();
+  }, 30_000);
+
+  it('a second writer waits for the first within the busy timeout, then succeeds', async () => {    const file = dbFile();
     const store = track(openStore(file, { busyTimeoutMs: 5000 }));
     const holder = spawn(process.execPath, [child, file, 'hold', '500'], { stdio: ['ignore', 'pipe', 'inherit'] });
     await new Promise<void>((resolve) => holder.stdout.on('data', (chunk: Buffer) => chunk.toString().includes('LOCKED') && resolve()));

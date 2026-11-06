@@ -1017,6 +1017,13 @@ quality badge fed by stitcher metrics.
 **Files likely touched:** `renderer/src/screens/Result.tsx`, `components/CompareSlider.tsx`, `components/QualityBadge.tsx`, `test/result.test.tsx`
 **Estimated scope:** M (4–5 files)
 
+**T29 outcome (2026-11-06):** the Result screen is live and reads everything over IPC.
+- **Persistence:** the stitcher's output, metrics, flagged indices and a `stitchedAt` timestamp are written to the job row in the same transaction as `STITCHED`, so a finished job can be reopened and shown without re-stitching. New `jobs.result` returns the preview, source preview, plan, dimensions and metrics.
+- **Compare:** `CompareSlider` is one labelled range input, so mouse and keyboard work natively; `CompareSlider` also handles Arrow/Home/End/PageUp/PageDown explicitly. Zoom is bounded at 100–400% in 50% steps with a Reset button; zoom only scales the viewport, never re-stitches.
+- **Seams:** the overlay draws the plan's tile edges over the stitched preview and toggles without touching the job or the image.
+- **Quality:** `QualityBadge` derives its label from `seamScore` thresholds and also shows `maxDeltaE` and the flagged count. Flagged tiles are listed and each row links to its cell in the tile grid.
+- **Tests:** `apps/desktop/test/result.test.tsx` (13 tests) covers loading, badge thresholds, slider keyboard/mouse, zoom bounds/reset, seam toggle, flagged list/map link, and the missing-stitch error.
+
 ### Task 30: Export
 
 **Outcome:** the user writes a final image whose dimensions match the plan.
@@ -1025,19 +1032,28 @@ quality badge fed by stitcher metrics.
 integer upscale when tiles came back larger than their cores.
 
 **Acceptance criteria:**
-- [ ] PNG, JPEG, and WebP export successfully with sensible quality defaults.
-- [ ] Output dimensions match the plan's output size (or the documented integer upscale).
-- [ ] Existing files are not overwritten without confirmation; the saved path is shown.
-- [ ] Export is cancellable and reports errors without crashing.
+- [x] PNG, JPEG, and WebP export successfully with sensible quality defaults.
+- [x] Output dimensions match the plan's output size (or the documented integer upscale).
+- [x] Existing files are not overwritten without confirmation; the saved path is shown.
+- [x] Export is cancellable and reports errors without crashing.
 
 **Verification:**
-- [ ] `pnpm --filter @ie/desktop test`
-- [ ] Manual export in all three formats; verify dimensions with `sharp`.
-- [ ] `pnpm typecheck`.
+- [x] `pnpm --filter @ie/desktop test`
+- [x] Manual export in all three formats; verify dimensions with `sharp`.
+- [x] `pnpm typecheck`.
 
 **Dependencies:** Tasks 22, 29
 **Files likely touched:** `apps/desktop/main/ipc/export.ts`, `packages/stitcher/src/export.ts`, `renderer/src/components/ExportDialog.tsx`, `test/export.test.ts`
 **Estimated scope:** S/M (4 files)
+
+**T30 outcome (2026-11-06):** the Result screen can save the finished picture.
+- **Writer:** `packages/stitcher/src/export.ts` adds `exportImage`: PNG (lossless, level 9), JPEG and WebP at a 1–100 quality (default 92). JPEG flattens transparency onto white first, and JPEG export uses 4:4:4 chroma so thin detail is not smeared.
+- **Sizes:** the stitcher's own output size is kept exactly; the tests assert 800 × 400 through the IPC handler and 96 × 64 through the stitcher.
+- **Save dialog:** `export.save` runs in the main process, which opens `dialog.showSaveDialog` with the right extension and a name based on the job result. The renderer never supplies a destination by itself. Only a picture that belongs to a stored job result can be exported, so the channel cannot be used to copy arbitrary files.
+- **Cancelling and errors:** a cancelled dialog returns the typed code `cancelled` (added to `IpcErrorCode`) and the screen says saving was cancelled without showing an error; any real failure is shown as an alert and the app keeps running.
+- **UI:** the Save panel sits under the comparison: format selector, quality slider for JPEG/WebP, a Save button with pending state, and the saved path and dimensions afterward. There is no separate `ExportDialog` component.
+- **Tests:** `packages/stitcher/test/export.test.ts` (3 formats, JPEG flattening, unreadable source), `apps/desktop/test/review.test.ts` (IPC save, cancel, refusal of foreign paths) and `apps/desktop/test/result.test.tsx` (default PNG, JPEG quality, cancel, failure).
+
 
 ### Task 31: Per-tile actions — backend
 
@@ -1083,6 +1099,15 @@ call IPC and refresh the result without restarting the job.
 **Dependencies:** Tasks 31, 29
 **Files likely touched:** `renderer/src/components/FlaggedTiles.tsx`, `screens/Result.tsx`, `hooks/useTileActions.ts`, `test/tileActions.test.tsx`
 **Estimated scope:** M (4 files)
+
+**T32 outcome (2026-11-06):** flagged tiles can be fixed from the Result screen.
+- **Flagged list:** every stitcher-flagged tile shows its reason (the tile's note, or the stitcher's default), its current state, and whether it already carries a prompt or source override. Each row has a "Show in tile map" action that highlights the matching cell.
+- **Actions:** Accept as is (only for a `needs-review` tile with an output), Try again, and Change prompt or picture. All go through the existing `jobs.acceptTile`, `jobs.rerunTile` and the new `jobs.setTileOverride` IPC channels; `useTileActions` keeps an independent pending/success/error state per tile so one action never hides another.
+- **Refresh without restart:** a re-run uses the existing job runner, which re-stitches and writes a new `stitchedAt`. The Result screen watches `activeJobId`, `progress.state === 'done'` and `progress.result.stitchedAt` and reloads the picture and metrics when the timestamp changes — the job id and other tile outputs stay put.
+- **Overrides:** `setTileOverride` stores the prompt text and/or a prepared PNG of the chosen source at the tile's send size (`tiles.source_override`). The tile runner uses the override for both the provider attachment and the quality-gate source; an empty prompt or a cleared source falls back to the job defaults. Overrides survive restart and are used on the next re-run.
+- **Keyboard:** every action is a real button, checkbox, file input or form; the edit form labels its prompt and source fields and Save is a submit button.
+- **Tests:** `apps/desktop/test/review.test.ts` (21) covers result previews and override persistence/use/clear/validation; `apps/desktop/test/result.test.tsx` covers flagged rows, accept/rerun pending/success/error, prompt/source edit and clear, and the refresh-driven reload.
+- **Caveat:** a re-run still restitches the whole picture; partial-region restitch from T31 is not implemented.
 
 ### Checkpoint E — After Tasks 29–32
 

@@ -17,3 +17,5 @@ export { seamScore } from './metrics';
 export type { SeamReport } from './metrics';
 export { stitch } from './stitch';
 export type { StitchIo, StitchReport } from './stitch';
+export { exportImage } from './export';
+export type { ExportImageRequest } from './export';

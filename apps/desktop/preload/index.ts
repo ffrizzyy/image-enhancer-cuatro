@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
-import type { IpcEvents, IpcRequest, IpcResponse } from '@ie/contracts';
+import type { IpcEvents, IpcRequest, IpcResponse, TileOverridePatch } from '@ie/contracts';
 
 export type IpcResult<T> =
   | { ok: true; value: T }
@@ -23,8 +23,7 @@ export interface IeApi {
   };
   jobs: {
     /** Starts the pre-run checks and the run in the background; progress arrives through `onProgress`. */
-    start(jobId: string): Promise<IpcResult<IpcResponse<'jobs.start'>>>;
-    pause(jobId: string): Promise<IpcResult<IpcResponse<'jobs.pause'>>>;
+    start(jobId: string): Promise<IpcResult<IpcResponse<'jobs.start'>>>;    pause(jobId: string): Promise<IpcResult<IpcResponse<'jobs.pause'>>>;
     resume(jobId: string): Promise<IpcResult<IpcResponse<'jobs.resume'>>>;
     cancel(jobId: string): Promise<IpcResult<IpcResponse<'jobs.cancel'>>>;
     get(jobId: string): Promise<IpcResult<IpcResponse<'jobs.get'>>>;
@@ -33,6 +32,10 @@ export interface IeApi {
     acceptTile(jobId: string, index: number): Promise<IpcResult<IpcResponse<'jobs.acceptTile'>>>;
     /** Review: generate a tile again with a fresh set of retries. */
     rerunTile(jobId: string, index: number): Promise<IpcResult<IpcResponse<'jobs.rerunTile'>>>;
+    /** Change one tile's own prompt or source picture before it is run again. */
+    setTileOverride(jobId: string, index: number, patch: TileOverridePatch): Promise<IpcResult<IpcResponse<'jobs.setTileOverride'>>>;
+    /** Everything the Result screen needs for a finished job. */
+    result(request: IpcRequest<'jobs.result'>): Promise<IpcResult<IpcResponse<'jobs.result'>>>;
     /** Review: every tile is settled, so put the picture together. */
     finishReview(jobId: string): Promise<IpcResult<IpcResponse<'jobs.finishReview'>>>;
     /** What a run of this many tiles would cost, before any job exists. */
@@ -41,6 +44,10 @@ export interface IeApi {
     /** Live job progress, pushed whenever a job or one of its tiles changes. Returns an unsubscribe function. */
     onProgress(listener: (event: IpcEvents['jobs.progress']) => void): () => void;
     onLog(listener: (event: IpcEvents['jobs.log']) => void): () => void;
+  };
+  export: {
+    /** Writes the finished picture in the chosen format; the main process opens the save dialog. */
+    save(request: IpcRequest<'export.save'>): Promise<IpcResult<IpcResponse<'export.save'>>>;
   };
   presets: {
     list(): Promise<IpcResult<IpcResponse<'presets.list'>>>;
@@ -90,6 +97,8 @@ const api: IeApi = {
     listRecent: (limit) => invoke('jobs.listRecent', limit === undefined ? {} : { limit }),
     acceptTile: (jobId, index) => invoke('jobs.acceptTile', { jobId, index }),
     rerunTile: (jobId, index) => invoke('jobs.rerunTile', { jobId, index }),
+    setTileOverride: (jobId, index, patch) => invoke('jobs.setTileOverride', { jobId, index, ...patch }),
+    result: (request) => invoke('jobs.result', request),
     finishReview: (jobId) => invoke('jobs.finishReview', { jobId }),
     costPreview: (request) => invoke('jobs.costPreview', request),
     tileThumbnail: (request) => invoke('jobs.tileThumbnail', request),
@@ -103,6 +112,9 @@ const api: IeApi = {
       ipcRenderer.on('jobs.log', handler);
       return () => ipcRenderer.removeListener('jobs.log', handler);
     },
+  },
+  export: {
+    save: (request) => invoke('export.save', request),
   },
   presets: {
     list: () => invoke('presets.list'),

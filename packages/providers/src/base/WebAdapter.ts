@@ -15,6 +15,12 @@ export interface WebAdapterDeps {
   now?: () => number;
   /** Length of one generation-wait slice between state checks. */
   pollMs?: number;
+  /**
+   * Keep using one provider chat for every call instead of opening a new chat each time. The app turns this on so a
+   * whole picture is enhanced in one conversation; direct adapter use and the contract tests keep the fresh-chat
+   * behaviour by default. Calls on a reused chat are run one at a time.
+   */
+  reuseChat?: boolean;
 }
 
 /**
@@ -44,8 +50,8 @@ const defaultSleep = (ms: number): Promise<void> => new Promise((resolve) => set
 const POLL_PAUSE_MS = 250;
 
 /**
- * The shared chat-UI flow: new chat, attach, paste the prompt, submit, wait for the image, download
- * it. Everything provider-specific lives in `config`; nothing here hard-codes a selector. Each
+ * The shared chat-UI flow: open a chat (or reuse one), attach, paste the prompt, submit, wait for the image,
+ * download it. Everything provider-specific lives in `config`; nothing here hard-codes a selector. Each
  * adapter adds only its id, capabilities and (later) any page quirks.
  */
 export class WebAdapter implements ProviderAdapter {
@@ -59,6 +65,11 @@ export class WebAdapter implements ProviderAdapter {
   private readonly random: () => number;
   private readonly now: () => number;
   private readonly pollMs: number;
+  private readonly reuseChat: boolean;
+  /** Whether the shared chat is already open. Only meaningful with `reuseChat`. */
+  private chatOpen = false;
+  /** Serializes calls on a reused chat: a conversation can only take one request at a time. */
+  private queue: Promise<void> = Promise.resolve();
 
   constructor(deps: WebAdapterDeps) {
     this.driver = deps.driver;
@@ -68,6 +79,7 @@ export class WebAdapter implements ProviderAdapter {
     this.random = deps.random ?? Math.random;
     this.now = deps.now ?? Date.now;
     this.pollMs = deps.pollMs ?? 1000;
+    this.reuseChat = deps.reuseChat ?? false;
     this.id = deps.config.id;
     this.capabilities = structuredClone(deps.config.capabilities);
   }
@@ -88,18 +100,49 @@ export class WebAdapter implements ProviderAdapter {
 
   async enhance(req: EnhanceRequest): Promise<EnhanceResult> {
     this.checkRequest(req);
+    if (!this.reuseChat) return this.enhanceOnce(req);
+
+    // One chat, one request at a time. The runner may ask for several tiles at once; without this queue their
+    // messages would interleave in the same conversation.
+    const run = this.queue.then(() => this.enhanceOnce(req));
+    this.queue = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
+  }
+
+  private async enhanceOnce(req: EnhanceRequest): Promise<EnhanceResult> {
     const started = this.now();
     const deadline = started + req.timeoutMs;
 
     try {
-      await this.openNewChat(deadline);
-      await this.attach(req, deadline);
+      if (this.reuseChat && this.chatOpen) {
+        // The chat is already open from the previous tile: wait for its composer and use it as it is.
+        await this.waitForComposer(deadline);
+        await this.throwIfBlocked();
+      } else {
+        await this.openNewChat(deadline);
+        this.chatOpen = true;
+      }
+
+      // A reused chat already shows the earlier results and may still show the earlier attachments. Count them first,
+      // so the waits below look for something new instead of accepting the previous tile's picture.
+      const baseline = {
+        images: await this.driver.count(this.config.selectors.resultImage.join(', ')),
+        thumbnails: await this.driver.count(this.config.selectors.attachmentThumb.join(', ')),
+      };
+
+      await this.attach(req, deadline, baseline.thumbnails);
       await this.enterPrompt(req.prompt);
       await this.submit();
-      await this.waitForImage(deadline);
+      await this.waitForImage(deadline, baseline.images);
       const image = await this.download(deadline);
       return { ...image, elapsedMs: this.now() - started };
     } catch (error) {
+      // Leave the conversation in a clean state for the next try: a failed generation may still be running or the
+      // page may have moved on, so the next call starts a fresh chat rather than risking the wrong picture.
+      this.chatOpen = false;
       throw this.toProviderError(error);
     }
   }
@@ -147,7 +190,7 @@ export class WebAdapter implements ProviderAdapter {
     }
   }
 
-  private async attach(req: EnhanceRequest, deadline: number): Promise<void> {
+  private async attach(req: EnhanceRequest, deadline: number, baselineThumbnails: number): Promise<void> {
     // Some chat UIs only create the file input after a menu is opened.
     for (const [index, step] of (this.config.beforeAttach ?? []).entries()) {
       const union = step.join(', ');
@@ -172,22 +215,24 @@ export class WebAdapter implements ProviderAdapter {
       req.attachments.map((a) => a.path),
     );
 
-    // Verify every thumbnail appeared before going on; a silent attach failure would send an empty prompt.
+    // Verify every thumbnail appeared before going on; a silent attach failure would send an empty prompt. A reused
+    // chat may still show the previous message's attachments, so only the ones beyond that baseline count.
     const thumbs = this.config.selectors.attachmentThumb.join(', ');
+    const expected = baselineThumbnails + req.attachments.length;
     const waitMs = Math.min(this.config.timeouts.attachMs, this.remaining(deadline, 'attaching files'));
     const stop = this.now() + waitMs;
-    while ((await this.driver.count(thumbs)) < req.attachments.length) {
+    while ((await this.driver.count(thumbs)) < expected) {
       if (this.now() >= stop) {
         throw new ProviderError(
           'ui-changed',
-          `Only ${await this.driver.count(thumbs)} of ${req.attachments.length} attachments appeared.`,
+          `Only ${Math.max(0, (await this.driver.count(thumbs)) - baselineThumbnails)} of ${req.attachments.length} attachments appeared.`,
           { selector: 'attachmentThumb' },
         );
       }
       await this.throwIfBlocked();
       await this.driver.waitFor(thumbs, Math.min(this.pollMs, Math.max(1, stop - this.now())));
       // waitFor returns as soon as one thumbnail exists; give the rest a moment instead of spinning.
-      if ((await this.driver.count(thumbs)) < req.attachments.length) await this.sleep(POLL_PAUSE_MS);
+      if ((await this.driver.count(thumbs)) < expected) await this.sleep(POLL_PAUSE_MS);
     }
   }
 
@@ -202,7 +247,7 @@ export class WebAdapter implements ProviderAdapter {
     await this.driver.click(await this.requireMatch('submitButton'));
   }
 
-  private async waitForImage(deadline: number): Promise<void> {
+  private async waitForImage(deadline: number, baselineImages: number): Promise<void> {
     const result = this.config.selectors.resultImage.join(', ');
     const spinner = this.config.selectors.generatingIndicator.join(', ');
     const stop = Math.min(deadline, this.now() + this.config.timeouts.generationMs);
@@ -213,10 +258,14 @@ export class WebAdapter implements ProviderAdapter {
       if (left <= 0) throw new ProviderError('timeout', `${MESSAGES.timeout} (waiting for the image)`);
 
       const appeared = await this.driver.waitFor(result, Math.min(this.pollMs, left));
-      // The image can show up before generation finishes (progressive previews); wait for the spinner to go.
+      // The image can show up before generation finishes (progressive previews); wait for the spinner to go. On a
+      // reused chat an earlier picture is always present, so only a count beyond the baseline is the new one. With no
+      // earlier picture (a new chat), the image merely being present is enough.
       if (appeared) {
-        if ((await this.driver.count(spinner)) === 0) return;
-        await this.sleep(Math.min(POLL_PAUSE_MS, Math.max(1, stop - this.now())));
+        const images = await this.driver.count(result);
+        const isNew = baselineImages === 0 || images > baselineImages;
+        if (isNew && (await this.driver.count(spinner)) === 0) return;
+        await this.sleep(Math.min(this.pollMs, Math.max(1, stop - this.now())));
       }
     }
   }

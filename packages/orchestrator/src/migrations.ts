@@ -88,4 +88,16 @@ CREATE INDEX events_job ON events (job_id, id);
     // A manual re-run gives a tile a fresh set of automatic retries: tries are counted from this attempt number.
     sql: `ALTER TABLE tiles ADD COLUMN attempt_base INTEGER NOT NULL DEFAULT 0 CHECK (attempt_base >= 0);`,
   },
+  {
+    version: 3,
+    // A tile can use its own picture, and a finished job keeps the stitched picture and its metrics for the Result screen.
+    sql: `
+ALTER TABLE tiles ADD COLUMN source_override TEXT;
+ALTER TABLE jobs ADD COLUMN stitched_path TEXT;
+ALTER TABLE jobs ADD COLUMN seam_score REAL;
+ALTER TABLE jobs ADD COLUMN max_delta_e REAL;
+ALTER TABLE jobs ADD COLUMN flagged_json TEXT;
+ALTER TABLE jobs ADD COLUMN stitched_at TEXT;
+`,
+  },
 ];

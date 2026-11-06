@@ -23,7 +23,13 @@ let dir: string;
 beforeAll(() => {
   dir = mkdtempSync(path.join(tmpdir(), 'ie-orch-prop-'));
 });
-afterAll(() => rmSync(dir, { recursive: true, force: true }));
+afterAll(() => {
+  try {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  } catch {
+    /* the OS will clean up the temporary folder */
+  }
+});
 
 type Op = 'start' | 'accept' | 'reject' | 'fail' | 'crash' | 'pause' | 'resume' | 'rerun';
 

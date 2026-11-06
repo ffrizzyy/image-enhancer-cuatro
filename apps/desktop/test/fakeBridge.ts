@@ -40,7 +40,10 @@ export function installBridge(overrides: { settings?: AppSettings } = {}) {
     costPreview: vi.fn(),
     acceptTile: vi.fn(),
     rerunTile: vi.fn(),
+    setTileOverride: vi.fn(),
+    result: vi.fn(),
     finishReview: vi.fn(),
+    saveExport: vi.fn(),
     listPresets: vi.fn(),
     suggest: vi.fn(),
     pathFor: vi.fn(),
@@ -92,6 +95,7 @@ export function installBridge(overrides: { settings?: AppSettings } = {}) {
   bridge.startJob.mockImplementation(async (jobId: string) => ({ ok: true, value: { jobId, state: 'preflight' } }));
   bridge.listRecent.mockImplementation(async () => ({ ok: true, value: useShellStore.getState().recentJobs }));
   bridge.tileThumbnail.mockResolvedValue({ ok: true, value: { dataUrl: 'data:image/jpeg;base64,BBBB', width: 160, height: 120 } });
+  bridge.saveExport.mockResolvedValue({ ok: true, value: { path: 'C:\\Pictures\\enhanced.png', width: 800, height: 400 } });
   bridge.costPreview.mockImplementation(async (request: { providerId: string; tileCount: number }) => ({
     ok: true,
     value: { tiles: request.tileCount, estimatedMinutes: Math.max(1, Math.round(request.tileCount * 0.6)), quotaNote: `This run makes ${request.tileCount} image generation${request.tileCount === 1 ? '' : 's'} on your ${request.providerId} account, plus any retries.` },
@@ -119,6 +123,8 @@ export function installBridge(overrides: { settings?: AppSettings } = {}) {
       costPreview: bridge.costPreview,
       acceptTile: bridge.acceptTile,
       rerunTile: bridge.rerunTile,
+      setTileOverride: bridge.setTileOverride,
+      result: bridge.result,
       finishReview: bridge.finishReview,
       onProgress: (listener) => {
         progressListeners.add(listener);
@@ -130,6 +136,7 @@ export function installBridge(overrides: { settings?: AppSettings } = {}) {
       },
     },
     presets: { list: bridge.listPresets, suggestCategory: bridge.suggest },
+    export: { save: bridge.saveExport },
     files: { pathFor: bridge.pathFor },
     sessions: {
       open: bridge.open,
@@ -169,6 +176,7 @@ export function installBridge(overrides: { settings?: AppSettings } = {}) {
     progress: {},
     jobLog: {},
     runError: null,
+    result: { status: 'idle' },
   });
 
   return bridge;

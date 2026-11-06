@@ -177,7 +177,16 @@ export async function runJob(options: RunJobOptions): Promise<RunJobResult> {
   if (store.getJob(jobId)!.state === 'stitching') {
     const stitched = await stitchJob(options, files.dir);
     if (stitched.ok) {
-      applyJobEvent(store, jobId, { type: 'STITCHED' });
+      // Keep the picture and its metrics before saying the job is done, so the Result screen can always find them.
+      store.transaction(() => {
+        store.setJobResult(jobId, {
+          imagePath: stitched.report.imagePath,
+          metrics: stitched.report.metrics,
+          flagged: stitched.report.flagged,
+          stitchedAt: (options.now?.() ?? new Date()).toISOString(),
+        });
+        applyJobEvent(store, jobId, { type: 'STITCHED' });
+      });
       return finish({ stitched: stitched.report });
     }
     applyJobEvent(store, jobId, { type: 'FAIL', error: stitched.error });

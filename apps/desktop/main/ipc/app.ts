@@ -7,7 +7,7 @@ import {
 import type { IntakeErrorCode } from '@ie/intake';
 
 /** Typed error envelope: handlers never throw across the IPC boundary. */
-export type IpcErrorCode = 'invalid_request' | 'invalid_response' | 'internal' | IntakeErrorCode;
+export type IpcErrorCode = 'invalid_request' | 'invalid_response' | 'internal' | 'cancelled' | IntakeErrorCode;
 
 export type IpcResult<T> =
   | { ok: true; value: T }

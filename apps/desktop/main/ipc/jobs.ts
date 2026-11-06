@@ -60,6 +60,35 @@ export const handleJobsAcceptTile = (payload: unknown, service: JobService) => t
 /** Review: generate a tile again, with a fresh set of retries. */
 export const handleJobsRerunTile = (payload: unknown, service: JobService) => tileAction('jobs.rerunTile', payload, (id, index) => service.rerunTile(id, index));
 
+/** Review: change one tile's prompt or source picture before it is run again. */
+export async function handleJobsSetTileOverride(payload: unknown, service: JobService): Promise<IpcResult<IpcResponse<'jobs.setTileOverride'>>> {
+  const request = parseIpcRequest('jobs.setTileOverride', payload);
+  if (!request.ok) return ipcError('invalid_request', request.error);
+  try {
+    const progress = await service.setTileOverride(request.value.jobId, request.value.index, {
+      ...(request.value.prompt !== undefined ? { prompt: request.value.prompt } : {}),
+      ...(request.value.sourcePath !== undefined ? { sourcePath: request.value.sourcePath } : {}),
+    });
+    const response = parseIpcResponse('jobs.setTileOverride', progress);
+    return response.ok ? { ok: true, value: response.value } : ipcError('invalid_response', response.error);
+  } catch (error) {
+    return toIpcError(error);
+  }
+}
+
+/** Everything the Result screen shows for a finished job. */
+export async function handleJobsResult(payload: unknown, service: JobService): Promise<IpcResult<IpcResponse<'jobs.result'>>> {
+  const request = parseIpcRequest('jobs.result', payload);
+  if (!request.ok) return ipcError('invalid_request', request.error);
+  try {
+    const result = await service.result(request.value.jobId, request.value.maxSide);
+    const response = parseIpcResponse('jobs.result', result);
+    return response.ok ? { ok: true, value: response.value } : ipcError('invalid_response', response.error);
+  } catch (error) {
+    return toIpcError(error);
+  }
+}
+
 /** Review: every tile is settled, so put the picture together. */
 export async function handleJobsFinishReview(payload: unknown, service: JobService): Promise<IpcResult<IpcResponse<'jobs.get'>>> {
   const request = parseIpcRequest('jobs.finishReview', payload);

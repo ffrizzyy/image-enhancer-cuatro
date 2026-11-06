@@ -104,6 +104,8 @@ describe('IPC channel map', () => {
         'slicer.plan',
         'jobs.acceptTile',
         'jobs.rerunTile',
+        'jobs.setTileOverride',
+        'jobs.result',
         'jobs.finishReview',
         'jobs.costPreview',
         'jobs.tileThumbnail',

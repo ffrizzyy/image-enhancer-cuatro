@@ -195,6 +195,19 @@ describe('fetchImage', () => {
     expect([...bytes]).toEqual([...PNG]);
   });
 
+  it('downloads the newest picture when a reused chat still shows earlier ones', async () => {
+    const contents = new JsdomContents(
+      page('<img class="result" src="https://cdn.example.test/old=s512" /><img class="result" src="https://cdn.example.test/new=s512" />'),
+    );
+    const seen: string[] = [];
+    withFetch(contents, async (url) => {
+      seen.push(url);
+      return ok(PNG, contents);
+    });
+    await driverFor(contents).fetchImage('img.result', 2000, { urlRewrites: [{ pattern: '=s\\d+$', replacement: '=s0' }] });
+    expect(seen).toEqual(['https://cdn.example.test/new=s0']);
+  });
+
   it('rewrites the URL to reach the original resolution, in order', async () => {
     const contents = new JsdomContents(IMAGE);
     const seen: string[] = [];

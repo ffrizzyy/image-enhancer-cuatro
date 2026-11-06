@@ -26,6 +26,7 @@
     "@ie/providers": "workspace:*",
     "@ie/sessions": "workspace:*",
     "@ie/slicer": "workspace:*",
+    "@ie/stitcher": "workspace:*",
     "@tailwindcss/vite": "^4.3.4",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",

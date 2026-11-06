@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { CURRENT_RISK_NOTICE_VERSION, type ProviderId } from '@ie/contracts';
+import { CURRENT_RISK_NOTICE_VERSION, type ExportFormat, type ExportRequest, type ProviderId } from '@ie/contracts';
 import {
   createHealthProbe,
   createSessionManager,
@@ -18,10 +18,11 @@ import { getFeatures } from '@ie/intake';
 import { openStore } from '@ie/orchestrator';
 import { createGeminiAdapter, createGptAdapter, createGrokAdapter, createImageSaver, type ProviderAdapter } from '@ie/providers';
 import { ElectronPageDriver } from '@ie/providers/electron';
-import { app, BrowserWindow, ipcMain, session, type WebContents } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, session, type WebContents } from 'electron';
 import sharp from 'sharp';
 
 import { handleAppPing, ipcError } from './ipc/app.js';
+import { handleExportSave } from './ipc/export.js';
 import { handleIntakeImport, handleIntakePreview } from './ipc/intake.js';
 import {
   handleCreateAndRegisterJob,
@@ -31,8 +32,10 @@ import {
   handleJobsGet,
   handleJobsListRecent,
   handleJobsPause,
+  handleJobsResult,
   handleJobsRerunTile,
   handleJobsResume,  handleJobsStart,
+  handleJobsSetTileOverride,
   handleJobsTileThumbnail,
 } from './ipc/jobs.js';
 import { handlePresetsList, handlePresetsSuggest } from './ipc/presets.js';
@@ -66,6 +69,25 @@ export const CSP = [
 if (process.argv.includes('--provider-tool')) app.disableHardwareAcceleration();
 
 let mainWindow: BrowserWindow | undefined;
+
+const EXPORT_FILTERS: Record<ExportFormat, string> = {
+  png: 'PNG picture',
+  jpeg: 'JPEG picture',
+  webp: 'WebP picture',
+};
+
+/** Opens the native save dialog and returns the chosen path, or null when the person cancels. */
+async function chooseExportDestination(request: ExportRequest): Promise<string | null> {
+  const extension = request.format === 'jpeg' ? 'jpg' : request.format;
+  const base = path.basename(request.imagePath, path.extname(request.imagePath)) || 'enhanced';
+  const options = {
+    title: 'Save the enhanced picture',
+    defaultPath: path.join(app.getPath('pictures'), `${base}.${extension}`),
+    filters: [{ name: EXPORT_FILTERS[request.format], extensions: [extension] }],
+  };
+  const result = mainWindow ? await dialog.showSaveDialog(mainWindow, options) : await dialog.showSaveDialog(options);
+  return result.canceled || !result.filePath ? null : result.filePath;
+}
 
 function registerIpc(): void {
   const settings = createSettingsStore(path.join(app.getPath('userData'), 'settings.json'), app.getPath('userData'));
@@ -108,7 +130,7 @@ function registerIpc(): void {
     const opened = await manager.open(providerId, { visible: settings.get().watchMode });
     const driver = new ElectronPageDriver(opened.view.native);
     const saveImage = createImageSaver(path.join(userData, 'provider-downloads', providerId), `${providerId}-result`);
-    const adapter: ProviderAdapter = providerId === 'gemini' ? createGeminiAdapter({ driver, saveImage }) : providerId === 'gpt' ? createGptAdapter({ driver, saveImage }) : createGrokAdapter({ driver, saveImage });
+    const adapter: ProviderAdapter = providerId === 'gemini' ? createGeminiAdapter({ driver, saveImage, reuseChat: true }) : providerId === 'gpt' ? createGptAdapter({ driver, saveImage, reuseChat: true }) : createGrokAdapter({ driver, saveImage, reuseChat: true });
     return { adapter, release: () => driver.dispose() };
   };
   const jobs = createJobService({
@@ -136,9 +158,12 @@ function registerIpc(): void {
   ipcMain.handle('jobs.listRecent', (_event, payload: unknown) => handleJobsListRecent(payload, jobs));
   ipcMain.handle('jobs.acceptTile', (_event, payload: unknown) => handleJobsAcceptTile(payload, jobs));
   ipcMain.handle('jobs.rerunTile', (_event, payload: unknown) => handleJobsRerunTile(payload, jobs));
+  ipcMain.handle('jobs.setTileOverride', (_event, payload: unknown) => handleJobsSetTileOverride(payload, jobs));
+  ipcMain.handle('jobs.result', (_event, payload: unknown) => handleJobsResult(payload, jobs));
   ipcMain.handle('jobs.finishReview', (_event, payload: unknown) => handleJobsFinishReview(payload, jobs));
   ipcMain.handle('jobs.costPreview', (_event, payload: unknown) => handleJobsCostPreview(payload, jobs));
   ipcMain.handle('jobs.tileThumbnail', (_event, payload: unknown) => handleJobsTileThumbnail(payload, jobs));
+  ipcMain.handle('export.save', (_event, payload: unknown) => handleExportSave(payload, jobs, chooseExportDestination));
   ipcMain.handle('intake.preview', (_event, payload: unknown) => handleIntakePreview(payload, assets));
   ipcMain.handle('slicer.plan', (_event, payload: unknown) => handleSlicerPlan(payload, assets));
   ipcMain.handle('presets.list', () => handlePresetsList());

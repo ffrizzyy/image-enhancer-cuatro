@@ -82,6 +82,12 @@ export function Run() {
             onWatchMode={(on) => void store().setWatchMode(on, progress.providerId)}
           />
 
+          {progress.state === 'done' && (
+            <button type="button" className="rounded bg-slate-900 px-3 py-1 text-sm text-white" onClick={() => store().navigate('result')}>
+              See the result
+            </button>
+          )}
+
           {progress.state === 'needs-review' && (
             <ReviewPanel
               progress={progress}
